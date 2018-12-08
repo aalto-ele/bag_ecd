@@ -4,15 +4,16 @@
 # Provides commmon setup method for other classes in bag generator scripts
 # Created by Marko Kosunen
 #
-# Last modification by Marko Kosunen, marko.kosunen@aalto.fi, 05.12.2018 00:29
+# Last modification by Marko Kosunen, marko.kosunen@aalto.fi, 07.12.2018 16:14
 ##############################################################################
 import sys
 import os
-import getpass
 import time
 import tempfile
+import getpass
 import re
 import abc
+import yaml
 from abc import *
 from functools import reduce
 
@@ -24,13 +25,14 @@ from functools import reduce
 
 class bag_startup(metaclass=abc.ABCMeta):
     #Define here the common attributes for the system
-    
     #Solve for the BAGHOME
     BAGHOME=os.path.realpath(__file__)
     for i in range(2):
         BAGHOME=os.path.dirname(BAGHOME)
     print("Home of BAG is %s" %(BAGHOME))
+    #This is for bag control through shell txtfile if needed
     CONFIGFILE=BAGHOME+'/BAG.config'
+
     print("Config file  of BAG is %s" %(CONFIGFILE))
 
     sys.path.append(os.environ['BAG_FRAMEWORK'])
@@ -39,6 +41,13 @@ class bag_startup(metaclass=abc.ABCMeta):
     sys.path.append(os.path.join(os.environ['BAG_WORK_DIR'], 'bag_analog_ec'))
     sys.path.append(os.path.join(os.environ['BAG_WORK_DIR'], 'bag_serdes_ec'))
     sys.path.append(os.path.join(os.environ['BAG_WORK_DIR'], 'bag_testbenches_ec'))
+
+    #Lets read the BAG config pyhhon dictionary
+    # Im quite sure that these can be accessd through bag class
+    with open(BAGHOME+'/bag_config.yaml', 'r') as f:
+        bag_config = yaml.load(f)
+
+
     #Appending all BAG generator python modules to system path 
     # (only ones, with set subtraction)
     
