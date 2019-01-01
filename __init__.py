@@ -38,9 +38,6 @@ class bag_startup(metaclass=abc.ABCMeta):
     sys.path.append(os.environ['BAG_FRAMEWORK'])
     sys.path.append(os.environ['BAG_TECH_CONFIG_DIR'])
     sys.path.append(os.path.join(os.environ['BAG_WORK_DIR'], 'BAG2_TEMPLATES_EC'))
-    sys.path.append(os.path.join(os.environ['BAG_WORK_DIR'], 'bag_analog_ec'))
-    sys.path.append(os.path.join(os.environ['BAG_WORK_DIR'], 'bag_serdes_ec'))
-    sys.path.append(os.path.join(os.environ['BAG_WORK_DIR'], 'bag_testbenches_ec'))
 
     #Lets read the BAG config pyhhon dictionary
     # Im quite sure that these can be accessd through bag class
