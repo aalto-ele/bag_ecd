@@ -16,6 +16,7 @@ import abc
 import yaml
 from abc import *
 from functools import reduce
+from shutil import copy2
 
 #Set 'must have methods' with abstractmethod
 #@abstractmethod
