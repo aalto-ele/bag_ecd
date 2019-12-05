@@ -6,8 +6,9 @@ from bag_ecd import bag_startup
 
 import bag
 from bag.layout import RoutingGrid, TemplateDB
+from BAG_technology_definition import BAG_technology_definition 
 
-class bag_design(metaclass=abc.ABCMeta):
+class bag_design(BAG_technology_definition,metaclass=abc.ABCMeta):
 
     @property
     @abstractmethod
@@ -37,16 +38,6 @@ class bag_design(metaclass=abc.ABCMeta):
             self._template_library_name= self.name+'_templates'
         return self._template_library_name
 
-    #Once we know the grid options, we may create routing grid 
-    #@property
-    #def routing_grid(self):
-    #    self._routing_grid=RoutingGrid(self.bag_project.tech_info, self.grid_opts['layers'], 
-    #            self.grid_opts['spaces'], 
-    #            self.grid_opts['widths'], 
-    #            self.grid_opts['bot_dir'], 
-    #            width_override=self.grid_opts['width_override'])
-    #    return self._routing_grid
-    
     
     @property
     def implementation_library_name(self):
@@ -66,6 +57,22 @@ class bag_design(metaclass=abc.ABCMeta):
                 raise Exception('Attributes draw_params and sch_params must be defined')
         else:
             return {**self.sch_params, **self.draw_params}
+
+    @property
+    def routing_grid(self):
+        ''' Defines the routing grid of this design
+        uses grid_opts defined in class BAG_technology_definition.
+        This practice garantees the designs to be track-compatible within the process.
+        '''
+        if (not hasattr(self,'_routing_grid')):
+            self._routing_grid= RoutingGrid(self.bag_project.tech_info, self.grid_opts['layers'], 
+                self.grid_opts['spaces'], 
+                self.grid_opts['widths'], 
+                self.grid_opts['bot_dir'], 
+                width_override=self.grid_opts['width_override'])
+            return self._routing_grid
+        else:
+            return self._routing_grid
 
     def import_design(self):
         ''' Method to import Virtuoso templates to BAG environment
