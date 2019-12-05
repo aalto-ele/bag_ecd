@@ -2,6 +2,8 @@ import sys
 import os
 import abc
 from abc import *
+from shutil import copy2
+
 from bag_ecd import bag_startup 
 
 import bag
@@ -53,7 +55,8 @@ class bag_design(BAG_technology_definition,metaclass=abc.ABCMeta):
     
     @property
     def layout_params(self):
-        if (not hasattr(self,'draw_params')) or (not hasattr(self,'draw_params')):
+        if (not hasattr(self,'draw_params')): 
+            #or (not hasattr(self,'sch_params')):
                 raise Exception('Attributes draw_params and sch_params must be defined')
         else:
             return {**self.sch_params, **self.draw_params}
