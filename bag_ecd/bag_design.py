@@ -1,3 +1,11 @@
+'''
+BAG Design
+==========
+
+Definitions of common attributes and methods for all bag designs to \
+guarantee design portability.
+
+'''
 import sys
 import os
 import abc
@@ -78,26 +86,31 @@ class bag_design(BAG_technology_definition,metaclass=abc.ABCMeta):
             return self._routing_grid
 
     def import_design(self):
-        ''' Method to import Virtuoso templates to BAG environment
+        ''' 
+        Method to import Virtuoso templates to BAG environment
 
-         If the library do not exist, create it
-         When created, check if this package has submodule OR class definition of schematic
-         If yes,
-            1) Add: from import <design>.schematic import schematic to module definition
-                    in BagModules/<design>/<templatename>.py
-            2) Replace the parent class Module of the created Bag module with schematic 
-             class of this package.
-            3) In that module, replace the content of the class with "pass"
+        If the library do not exist, create it
+        When created, check if this package has submodule OR class definition of \
+        schematic
         
-            If no
-            1) Copy generated module to <design>/schematic.py
-            2) change class name to schematic
-            3) Relocate the Yaml file
-            The the steps above
+        If yes:
+
+        1) Add: from import <design>.schematic import schematic to module definition \
+            in BagModules/<design>/<templatename>.py
+        2) Replace the parent class Module of the created Bag module with schematic \
+           class of this package.
+        3) In that module, replace the content of the class with "pass"
         
-            Effectively this moves the schematic definition from BagModules 
-            to <design>.schematic submodule. Making your module definition independent 
-            of BAG installation location. 
+        If no:
+
+        1) Copy generated module to <design>/schematic.py
+        2) Change class name to schematic
+        3) Relocate the Yaml file. 
+        
+        The the steps above effectively this moves the schematic definition from \
+        BagModules to <design>.schematic submodule. Making your module definition \
+        independent of BAG installation location. 
+
         '''
         #Parameters
         bag_project=self.bag_project

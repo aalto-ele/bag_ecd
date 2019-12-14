@@ -1,10 +1,19 @@
-''' Bag_startup
-===========
+''' 
+BAG ECD package
+===============
 
-Provides commmon setup method for other classes in bag generator scripts
-Created by Marko Kosunen
+Provides commmon setup method for Berkeley Analog Generator designs and \
+desing envireonments. Objective of this package is to abstract away the \
+BAG environment setup and design configuration overhead, and to make BAG \
+setups and designs:
+    1) Modular
+    2) Portable
+    3) Process independent
+    4) Agnostic to Python installation methods used
 
- Last modification by Marko Kosunen, marko.kosunen@aalto.fi, 07.12.2018 16:14
+Created by Marko Kosunen.
+
+ Last modification by Marko Kosunen, marko.kosunen@aalto.fi, 14.12.2019 10:40
 '''
 import sys
 import os
@@ -19,14 +28,10 @@ from functools import reduce
 from shutil import copy2
 
 
-#Set 'must have methods' with abstractmethod
-#@abstractmethod
-#Using this decorator requires that the class’s metaclass is ABCMeta or is 
-#derived from it. A class that has a metaclass derived from ABCMeta cannot 
-#be instantiated unless all of its abstract methods and properties are overridden.
-
 class bag_startup(metaclass=abc.ABCMeta):
-    #Define here the common attributes for the system
+    '''Defines the common attributes of the system environment
+
+    '''
     #Solve for the BAGHOME
     BAGHOME=os.path.realpath(__file__)
     for i in range(3):
@@ -41,16 +46,14 @@ class bag_startup(metaclass=abc.ABCMeta):
     sys.path.append(os.environ['BAG_TECH_CONFIG_DIR'])
     sys.path.append(os.path.join(os.environ['BAG_WORK_DIR'], 'BAG2_TEMPLATES_EC'))
 
-    #Lets read the BAG config pyhhon dictionary
-    # Im quite sure that these can be accessd through bag class
+    # Lets read the BAG config pyhhon dictionary
+    # Im quite sure that these can be accessed through bag class
     with open(BAGHOME+'/bag_config.yaml', 'r') as content:
         bag_config = yaml.load(content, Loader=yaml.FullLoader)
 
 
     #Appending all BAG generator python modules to system path 
     # (only ones, with set subtraction)
-    
-    
     GENERATORS=[(x[1]) for x in os.walk( BAGHOME)][0]
     #Add automatically the files from BAGHOME
     MODULEPATHS=[]
@@ -62,6 +65,7 @@ class bag_startup(metaclass=abc.ABCMeta):
     for i in list(set(MODULEPATHS)-set(sys.path)):
         print("Adding %s to system path" %(i))
         sys.path.append(i)
+    del i
     
     #Default logfile. Override with initlog if you want something else
     #/tmp/TheSDK_randomstr_uname_YYYYMMDDHHMM.log
@@ -113,6 +117,7 @@ class bag_startup(metaclass=abc.ABCMeta):
     #Common properties
     @property
     def DEBUG(self):
+        ''' Global attribute to setup a debug mode True | Falsw '''
         if not hasattr(self,'_DEBUG'):
             return 'False'
         else:
