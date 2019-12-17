@@ -1,0 +1,148 @@
+#!/bin/sh
+#####################################################
+# Convert TEX-files to PDF-files
+# Initially written by Marko Kosunen
+# Last modification by Marko Kosunen, marko.kosunen@aalto.fi, 19.07.2017 10:53
+# Version 1.4
+# Date: 27.06.2017
+#
+# Software required:
+#                  latex
+#                  ps2pdf
+#                  pdflatex
+#                  bibtex
+#                  makeindex
+#
+# Usage: Try makearticle -h
+#
+# Modification history:
+# - Made pdflatex default in release 1.1
+# - Removed annoying '-synctex' option in release 1.2
+# - Added the default input file option in v1.3
+# - Merged makearticle and makesides in v1.4
+# 
+####################################################
+
+# function to display help with -h argument
+help_f()
+{
+cat << EOF    
+MAKEARTICLE Release 1.5 (19.08.2018)
+makeslides - Script for producing PDF document from TEX-files
+Written by Marko Pikkis Kosunen
+
+SYNOPSIS
+  makeslides [OPTIONS] [FILE]
+DESCRIPTION
+  Produce PDF-document from givend TEX-files
+  Output defaults to ./pdffiles/[FILE].pdf .
+
+OPTIONS
+  -c
+      Continuous compilation.
+  -d
+      Use dvi latex.
+  -H
+      Produce handouts.
+  -p
+      Use pdflatex (default).
+  -h
+      Show this help.
+EOF
+}
+#Initialize variables
+size=a4;
+#numargs=$#
+#Test if  exists
+PDFMODE=1;
+HANDOUT=0;
+LOOP="1";
+LOOPING="0";
+while getopts cdpHh opt
+do
+  case "$opt" in
+    c) LOOPING="1";;
+    d) PDFMODE="0";;
+    p) PDFMODE="1";;
+    H) HANDOUT="1";;
+    h) help_f; exit 0;;
+    \?) help_f;;
+  esac
+shift
+done
+
+
+# 
+# check if source file exists
+if [ -z "$1" ]; then
+    echo "Assuming dirname ad default filename"
+    DIR=`pwd`
+    doc=`basename $DIR`
+    echo "Using default filename $doc." 
+    if [! -f "${doc}.tex" ]; then
+        echo "ERROR: Input file does not exist."
+        exit 1
+    fi
+elif [ ! -f "$1" ]; then
+    echo "ERROR: Input file does not exist."
+    help_f
+    exit 1
+else
+    # remove extension of source file
+    doc=`echo $1 | sed 's/\(.*\)\(.[Tt][Ee][Xx]$\)/\1/g'`
+fi
+
+
+while [ "$LOOP" -eq "1" ]; do
+    # compile
+    if [ $PDFMODE == "0" ]; then
+        # create output directories
+        if [ ! -d ./psfiles ]; then
+         mkdir ./psfiles
+         echo "Created directory ./psfiles"
+        fi
+        latex $doc.tex
+        makeindex $doc.glo -s nomencl.ist -o $doc.gls
+        bibtex $doc
+        latex $doc.tex
+        latex $doc.tex
+        dvips -Ppdf -G0 -ta4 $doc.dvi -o - | ps2pdf -sPAPERSIZE=a4 -dMaxSubsetPct=100 -dCompatibilityLevel=1.4 -dPDFSETTINGS=/prepress -dSubsetFonts=true -dEmbedAllFonts=true - ./pdffiles/$doc.pdf
+    else 
+        if [ ! -d ./pdffiles ]; then
+         mkdir ./pdffiles
+         echo "Created directory ./pdffiles"
+        fi
+        pdflatex $doc.tex
+        makeindex $doc.nlo -s nomencl.ist -o $doc.nls
+        bibtex $doc
+        pdflatex $doc.tex
+        pdflatex $doc.tex
+        mv $doc.pdf ./pdffiles/
+        if [ $HANDOUT == "1" ]; then
+            echo "\PassOptionsToClass{handout}{beamer}" > ${doc}_handout.tex
+            cat ${doc}.tex >> ${doc}_handout.tex
+            pdflatex  ${doc}_handout.tex
+            makeindex ${doc}_handout.nlo -s nomencl.ist -o ${doc}_handout.nls
+            bibtex ${doc}_handout
+            pdflatex  ${doc}_handout.tex
+            pdflatex   ${doc}_handout.tex
+            mv ${doc}_handout.pdf ./pdffiles/ 
+        fi
+    fi
+    touch $doc.timestamp
+    if [ "${LOOPING}" -eq "1" ]; then
+        LOOP="1"
+        while [ "$doc.timestamp" -nt "$doc.tex" ]; do 
+            sleep 1
+        done
+    else
+        LOOP="0"
+    fi
+done
+# remove useless crap
+for i in  *.dvi  *.aux  *.bbl  *.blg *.log *.out *.toc *.nlo *.nls *.ilg *.snm ${doc}_handout.tex $doc.timestamp;  do
+    if [ -f ./"$i" ]; then
+     echo "Cleaning up $i"
+     rm -f "./$i"
+   fi
+done

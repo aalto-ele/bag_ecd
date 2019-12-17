@@ -1,0 +1,47 @@
+%%%% This for easy placemnet of figure inside a block
+\newcommand{\putfig}[3][1.0]{
+    \begin{block}{#3}
+        \includegraphics[width=#1\linewidth,height=#1\textheight,keepaspectratio]{#2}
+    \end{block}
+}
+
+%This is for a box 
+\newcommand{\tbox}[3][0.3]{
+    \tikzoverlay (n1) at (#2) {%
+        \begin{tikzpicture}[every node/.style={inner sep=0.5ex,outer sep=0}]
+            \tikzstyle{item}=[rectangle, draw=black, rounded corners, 
+                    fill=secondarycolor!10, drop shadow,
+                    text centered, anchor=north, text=black] 
+                    \node (thenode)[item, rectangle]{
+                        \begin{minipage}{#1\linewidth} #3 \end{minipage}};
+        \end{tikzpicture}
+    };
+}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%This is for a image. For titled image, use putfig 
+\newcommand{\timage}[3][0.3]{
+    \tikzoverlay (n1) at (#2) {%
+        \begin{tikzpicture}[every node/.style={inner sep=0.5ex,outer sep=0}]
+            \tikzstyle{item}=[rectangle, draw=black, rounded corners, 
+                    fill=secondarycolor!10, drop shadow,
+                    text centered, anchor=north, text=white] 
+                    \node (thenode)[item, rectangle]{
+                        \includegraphics[width=#1\textwidth,height=#1\textheight,keepaspectratio]{#3}};
+        \end{tikzpicture}
+    };
+}
+
+
+%Ellipse
+\newcommand{\tellipse}[4]{
+    \begin{tikzpicture}[overlay]
+        \draw[secondarycolor,thick] (#1,#2) ellipse (#3 and #4);
+    \end{tikzpicture}
+}
+
+%Arrow
+\newcommand{\tarrow}[2]{
+    \begin{tikzpicture}[overlay]
+        \draw[secondarycolor,thick,->] (#1) -- (#2);
+    \end{tikzpicture}
+}
