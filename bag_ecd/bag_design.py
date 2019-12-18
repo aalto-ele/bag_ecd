@@ -11,6 +11,7 @@ import os
 import abc
 from abc import *
 from shutil import copy2
+import re
 
 from bag_ecd import bag_startup 
 
@@ -122,7 +123,7 @@ class bag_design(BAG_technology_definition,metaclass=abc.ABCMeta):
         
         # Path definitions 
         bag_home=bag_startup.BAGHOME
-        thispath=os.path.dirname(os.path.realpath(__file__))
+        thispath=os.path.dirname(os.path.realpath(self._classfile))
         new_lib_path=bag_project.bag_config['new_lib_path']
         schematic_generator=thispath+'/'+'schematic.py'
         tempgenfile=thispath+'/'+'schematic_temp.py'
@@ -173,7 +174,7 @@ class bag_design(BAG_technology_definition,metaclass=abc.ABCMeta):
         else:
             # Transfer schematic generator to thispath/schematic.py
             # One cell per directory. Import others from other generators
-            os.path.dirname(os.path.realpath(__file__)) + "/"+__name__
+            os.path.dirname(os.path.realpath(self._classfile)) + "/"+__name__
             print('Copying schematic generator to %s ' %(thispath+'/schematic.py'))
             copy2(packagename,schematic_generator)
       
