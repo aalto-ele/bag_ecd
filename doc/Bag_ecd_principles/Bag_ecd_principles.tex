@@ -366,11 +366,21 @@ Aalto University, School of Electrical Engineering\\marko.kosunen@aalto.fi}
             \begin{itemize}
                 \item Python package
                     \begin{itemize}
-                        \item Imports  
-                        \item Module and class schematic for schematic generation code. 
-                        \item Information import handled by bag\_ecd class
-                        \item Generator calls defined in bag\_ecd.bag\_design
-                            class.
+                        \item Bag\_ecd class as parent adds the essential bag
+                            modules and all generator modules to PYTHONPATH
+                            automatically during generator invocation.
+                        \item Bag\_ecd.bag\_design class:
+                            \begin{itemize}
+                                \item Defines common parameters for all
+                                    designs.
+                                \item Defines a method \emph{import\_design}  for importing the template
+                                    information to python environment.
+                                \item Defines method \emph{generate} that
+                                    imports the design and generates the
+                                    schematic and layout with help of methods
+                                    defines layout
+                                    and schematic classes of the design.
+                            \end{itemize}
                     \end{itemize}
             \end{itemize}
         \end{minipage}
@@ -395,7 +405,7 @@ Aalto University, School of Electrical Engineering\\marko.kosunen@aalto.fi}
             [file]{\_\_init\_\_.py};
             \node[anchor=west, below right = 0.5 cm and 0.0cm of
             initt.west](design)
-            [file]{bag\_desing.py};
+            [file]{bag\_design.py};
             \draw[>=latex,primarycolor, rounded corners, very thick,->]
         (root.west) |- (module.west);
             \draw[>=latex,primarycolor, rounded corners, very thick,->]
