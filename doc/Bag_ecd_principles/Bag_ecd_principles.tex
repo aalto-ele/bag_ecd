@@ -1,4 +1,3 @@
- 
 \PassOptionsToPackage{ELEC}{aaltologo}
 \documentclass[logo=bluequo,normaltitle]{aaltoslides}
 %\documentclass{aaltoslides} % DEFAULT
@@ -33,9 +32,9 @@
 
 
 %%%% To insert lecture date
-%\newcommand{\lectdate}{19.11.2015}
-\newcommand{\lectdate}{\today}
-\newcommand{\slidetitle}{Lectures on Electronics}
+\newcommand{\lectdate}{18.12.2019}
+%\newcommand{\lectdate}{\today}
+\newcommand{\slidetitle}{Modular BAG configuration}
 %%%%
 
 \title{\slidetitle}
@@ -44,7 +43,7 @@
 \institute[MNT]{Department of Micro and Nanosciences\\
 Aalto University, School of Electrical Engineering\\marko.kosunen@aalto.fi}
 
-\aaltofootertext{THIS IS THE FOOTER}{\lectdate}{\arabic{page}/\pageref{LastPage}\ }
+\aaltofootertext{}{\lectdate}{\arabic{page}/\pageref{LastPage}\ }
 
 \date{\lectdate}
 
@@ -72,228 +71,368 @@ Aalto University, School of Electrical Engineering\\marko.kosunen@aalto.fi}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{frame}[t]
-    \frametitle{Objective}
+    \frametitle{Outline}
     \begin{itemize}
-        \item Useful can insert useful slide structures by reading in one of the
-            files TXXX.tex
-            \pause
-        \item Try them out to see if you like them        
+        \item Programmatic design environment
+        \item Modular BAG design environment
+        \item BAG\_technology\_definition
+        \item Design module
+        \item BAG-ecd and bag\_design classes
+        \item Generator demo
     \end{itemize}
-    %examples of ellipse, arrow and thumbnail
-    \timage[0.3]{5ex,-5ex}{./Pics/ADconvert.eps}%
-    \tellipse{5ex}{-5ex}{2ex}{2ex}%
-    \tarrow{0ex,0ex}{5ex,-5ex}
-    \tbox{5ex,-13ex}{Hello World\!}
 \end{frame}
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{frame}[t]
-    \frametitle{What is Digital?}
-    \begin{itemize}
-        \item<1-> Digital means quite literally ''numerical, and what we can say
-            for sure, is that
+    \frametitle{Programmatic design environment}
+    \centering
+    \resizebox{0.75\textwidth}{!}{%
+     \input{./Pics/programmatic_abstractions.tikz} 
+
+     \tellipse{-2.5cm}{4.5cm}{3cm}{1.5cm}
+ }
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}[t]
+    \frametitle{Modular BAG design environment principles}
+        \begin{minipage}{.68\linewidth}
             \begin{itemize}
-                \item<2-> Analog information is continuous in time.
-                \item<2-> Digital information is quantized and interpreted as a number).
+                \item Virtuoso design environment and technology definitions
+                    BAG independent.
+                \item BAG configuration and modules added as git modules.
+                \item BAG Configuration files created by  configure script 
+                \item Software paths defined by sourceme.csh 
+                \item Design specific information imported with
+                    design specific configure scripts or as a part of the design procedure.
             \end{itemize}
-    \end{itemize}
-     \includegraphics[width=0.7\textwidth]{./Pics/ADconvert.eps}\ 
-\end{frame}
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% This slide contais a nice example of tikz for graphics. You use them for
-% arrows etc
-\begin{frame}[t]
-    \frametitle{Some Tikz and overlay stuff}
-    \begin{itemize}
-            \pause
-        \item  To put it simply: Computing
-            \pause
-        \item History of digital electronics is history of automated
-            computing.
-            \pause
-        \item Number is very interference tolerant. 
-            \pause
-        \item We have (some) control over the
-            noise and interference.
-            \pause
-    \end{itemize}
-\begin{minipage}{.48\linewidth}
-            \begin{center}
-                \begin{tikzpicture}
-                    \tikzstyle{item}=[rectangle, draw=black, rounded corners, 
-                        fill=blue!40, drop shadow,
-                        text centered, anchor=north, text=white, text
-                    width=4.0cm]
-                    \node (Leibnitz) [item, rectangle]
-                        {
-                            \textbf{\tiny Gottfried Leibnitz, 1646-1716}
-                        }; 
-
-                        \node(Null1) [below= 0.5cm of Leibnitz]{};
-                        \node (Babbage) [item, rectangle, left= 0.25cm of Null1]
-                        {
-                            \textbf{\tiny Charles Babbage, 1791-1871}
-                        }; 
-
-                        \node (Lovelace) [item, rectangle, right= 0.25cm of
-                        Null1]
-                        {
-                            \textbf{\tiny Ada Lovelace, 1815-1852}
-                        }; 
-                        \node (Boole) [item, rectangle, below= 0.5cm of
-                        Babbage]
-                        {
-                            \textbf{\tiny George Boole, 1815-1864}
-                        }; 
-                        \node (Morgan) [item, rectangle, below= 0.5cm of
-                        Lovelace]
-                        {
-                            \textbf{\tiny Augustus de Morgan, 1806-1871}
-                        }; 
-
-                        \node(Null2) [right= 0.25cm of Boole]{};
-                        \node (Shannon) [item, rectangle, below= 0.5cm of
-                        Null2]
-                        {
-                            \textbf{\tiny Claude Shannon, 1916-2001}
-                        }; 
-                        \node(Null3) [below= 0.5cm of Shannon]{};
-                        \node (Turing) [item, rectangle, left= 0.25cm of
-                        Null3]
-                        {
-                            \textbf{\tiny Alan Turing, 1912-1954}
-                        }; 
-                        \node (Neumann) [item, rectangle, right= 0.25cm of
-                        Null3]
-                        {
-                            \textbf{\tiny John von Neumann, 1903-1957}
-                        }; 
-                \end{tikzpicture}
-            \end{center}
-\end{minipage}
-\end{frame}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Another example of overlays
-\begin{frame}[t]
-    \frametitle{Another example of overlays}
-    \begin{centering}
-    \end{centering}
-    \begin{itemize}
-        \item<1-> On Lecture  5, you were taught about continuous time systems.
-        \item<2-> The systems were described with Laplace transform in S-domain.
-        \item<3-> Continuous time filters were used as system examples.
-    \end{itemize}
-    \begin{centering}
-        \includegraphics[width=0.5\textwidth]{./Pics/Generic_system.png}\
-    \end{centering}
-\end{frame}
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\begin{frame}[t]
-    \frametitle{For equations, use align}
-    \begin{align*}
-        X(f)=\int_{-\infty}^{\infty} x(t)\sigma\left(t-nT\right)e^{-j\omega t} dt
-    \end{align*}
-    \begin{align*}
-        X(f)=\sum_{n=-\infty}^{\infty}x\left(n\right)e^{-j\Omega n} dt,\quad
-        \Omega=\frac{2\pi f}{F_s}
-    \end{align*}
-    \begin{align*}
-        X(Z)=\sum_{-\infty}^{\infty} x\left(n\right)Z^{-n}dt
-    \end{align*}
-        \begin{itemize}
-            \item Hey! They are all the same if
-        \end{itemize}
-        \begin{align*}
-            Z=e^{j\omega n T_s}
-        \end{align*}
-\end{frame}
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\begin{frame}[t]
-    \frametitle{Images inside a block}
-\begin{itemize}
-        \item  Implementation can be described for example with Z-domain block
-            diagram. 
-    \end{itemize}
-    \begin{minipage}[t]{.45\linewidth}
-        \putfig[0.78]{./Pics/SInc4_recursive.eps}{Implementation 1}
-    \end{minipage}
-    \hfill
-    \begin{minipage}[t]{.45\linewidth}
-        \putfig{./Pics/SInc4_FIR.eps}{Implementation 2}
-    \end{minipage}
-\end{frame}
-
-
-    
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\begin{frame}[t]
-    \frametitle{Another example of Tikz overlays}
-    \visible<1->{
-        \tikzoverlay (n1) at (0cm,-0cm) {%
-            \begin{minipage}[T]{0.3\textwidth}
-                \includegraphics[width=.95\textwidth]{./Pics/NAND_logic.png}\
-            \end{minipage}
-        };
-    }
-    \visible<2->{
-        \tikzoverlay (n2) at (3.7cm,-0.9cm) {%
-            \begin{minipage}[T]{0.15\textwidth}
-                \includegraphics[width=.95\textwidth]{./Pics/NAND_gate.png}\
-            \end{minipage}
-        };
-    }
-    \visible<3->{
-        \tikzoverlay (n3) at (6cm,-0.7cm) {%
-            \begin{minipage}[T]{0.1\textwidth}
-                \includegraphics[width=.95\textwidth]{./Pics/NAND_transistor.png}\
-            \end{minipage}
-        };
-    }
-    \visible<4->{
-        \tikzoverlay (n4) at (8cm,-0.6cm) {%
-            \begin{minipage}[T]{0.1\textwidth}
-                \includegraphics[width=.95\textwidth]{./Pics/NAND_layout.png}\
-            \end{minipage}
-        };
-    }
-
-    \visible<5->{
-        \tikzoverlay (n5) at (4cm,-2.5cm) {%
-            \begin{minipage}[T]{0.24\textwidth}
-                \includegraphics[width=.95\textwidth]{./Pics/IMG_2113_edit.eps}\
-            \end{minipage}
-        };
-    }
-        \tikzoverlay (n6) at (-1cm,-5cm) {%
-            \begin{minipage}[T]{\textwidth}    
-                \begin{itemize}
-                    \item<5->  Designing digital circuits is mapping logical functions to
-                        transistor level equivalents, \emph{implemented} on a
-                        chosen platform, ASIC or FPGA.
-                \end{itemize}
         \end{minipage}
-        };
-    
-    \begin{tikzpicture}[remember picture, overlay]
-        \visible<2->{\path [line width=0.3mm,->] (2.8cm, -0.5cm) edge (3.7cm,
-        -0.5cm);}
-        \visible<3->{\path [line width=0.3mm,->] (5.7cm, -0.5cm) edge (6.5cm,
-        -0.5cm);}
-        \visible<4->{\path [line width=0.3mm,->] (8.0cm, -0.5cm) edge (8.7cm,
-        -0.5cm);}
-        \visible<5->{\path [line width=0.3mm,->] (n4.west) edge (n5.east);}
-    \end{tikzpicture}
+        \begin{minipage}{.28\linewidth}
+    \resizebox{\linewidth}{!}{%
+\begin{tikzpicture}[every node/.style={inner sep=1ex,outer sep=0}]
+\tikzstyle{dir}=[draw=black, rounded corners, 
+                fill=secondarycolor!10, drop shadow,
+                align=center, anchor=west, text=black, rectangle, minimum
+                width=2cm,
+            minimum height=0.5cm] 
+\tikzstyle{file}=[ align=left, anchor=west, text=black, rectangle, minimum
+                width=2cm,
+            minimum height=0.5cm] 
+            \node[anchor=west](root)
+            [dir]{\textbf{./virtuoso\_<process>\_<version>\_<user>}};
+            \node[below right = 1cm and 0.5cm of root.west ] (f1)[file] {./configure};
+            \node[below = 0.5cm of f1.west ]  (f2)[file]
+            {./sourceme.csh};
+            \node[below = 0.5cm of f2.west ]  (f3)[file]
+            {./.cdsinit};
+            \node[below = 0.5cm of f3.west ]  (f4)[file] {./cds.lib};
+            \node[below = 0.5cm of f4.west ]  (f5)[file]
+            {./bag\_libs.def};
+            \node[below = 0.5cm of f5.west ]  (f6)[file]
+            {./bag\_config.yaml};
+            \node[below left = 1cm and -0.5cm of f6.west ](BAGtech)
+            [dir]{\textbf{Bag\_technology\_definition}};
+            \node[below = 1cm of BAGtech.west ](frame)
+            [dir]{\textbf{BAG\_framework}};
+            \node[below = 1cm of frame.west ](templ)
+            [dir]{\textbf{BAG2\_TEMPLATES\_EC}};
+            \node[below = 1cm of templ.west ](bagecd)
+            [dir]{\textbf{bag\_ecd}};
+            \node[below = 1cm of bagecd.west ](design)
+            [dir]{\textbf{diff\_amp}};
+            \draw[>=latex,primarycolor, rounded corners, very thick,->] (root.west) |- (f1.west);
+            \draw[>=latex,primarycolor, rounded corners, very thick,->] (root.west) |- (f2.west);
+            \draw[>=latex,primarycolor, rounded corners, very thick,->] (root.west) |- (f3.west);
+            \draw[>=latex,primarycolor, rounded corners, very thick,->] (root.west) |- (f4.west);
+            \draw[>=latex,primarycolor, rounded corners, very thick,->] (root.west) |- (f5.west);
+            \draw[>=latex,primarycolor, rounded corners, very thick,->] (root.west) |- (f6.west);
+            \draw[>=latex,primarycolor, rounded corners, very thick,->]
+        (root.west) |- (BAGtech.west);
+            \draw[>=latex,primarycolor, rounded corners, very thick,->]
+        (root.west) |- (frame.west);
+            \draw[>=latex,primarycolor, rounded corners, very thick,->]
+        (root.west) |- (templ.west);
+            \draw[>=latex,primarycolor, rounded corners, very thick,->]
+        (root.west) |- (design.west);
+            \draw[>=latex,primarycolor, rounded corners, very thick,->]
+        (root.west) |- (bagecd.west);
+\end{tikzpicture}
+ }
+        \end{minipage}
 \end{frame}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}[t]
+    \frametitle{Essential BAG modules}
+    \begin{minipage}{0.68\linewidth}
+       \begin{itemize}
+           \item BAG\_framework and BAG2\_TEMPLATES\_EC 
+               \begin{itemize}
+                   \item Forked from \emph{https://github.com/ucb-art}. 
+                   \item Some bugfixes filed as PR.
+               \end{itemize}
+           \item BAG\_technology\_definition 
+               \begin{itemize}
+                   \item In-house collection of \emph{all} technology
+                       dependent data and BAG virtuoso primitives (git
+                       submodule).
+               \end{itemize}
+       \end{itemize}
+    \end{minipage}
+    \begin{minipage}[t]{0.28\linewidth}
+    \resizebox{\linewidth}{!}{%
+\begin{tikzpicture}[every node/.style={inner sep=1ex,outer sep=0}]
+\tikzstyle{dir}=[draw=black, rounded corners, 
+                fill=secondarycolor!10, drop shadow,
+                align=center, anchor=west, text=black, rectangle, minimum
+                width=2cm,
+            minimum height=0.5cm] 
+\tikzstyle{file}=[ align=left, anchor=west, text=black, rectangle, minimum
+                width=2cm,
+            minimum height=0.5cm] 
+            \node[anchor=west](root)
+            [dir]{\textbf{./virtuoso\_<process>\_<version>\_<user>}};
+            \node[below right = 1cm and 0.5cm of root.west ](frame)
+            [dir]{\textbf{BAG\_framework}};
+            \node[below = 1cm of frame.west ](templ)
+            [dir]{\textbf{BAG2\_TEMPLATES\_EC}};
+            \node[below = 1cm of templ.west ](BAGtech)
+            [dir]{\textbf{Bag\_technology\_definition}};
+            \draw[>=latex,primarycolor, rounded corners, very thick,->]
+        (root.west) |- (BAGtech.west);
+            \draw[>=latex,primarycolor, rounded corners, very thick,->]
+        (root.west) |- (frame.west);
+            \draw[>=latex,primarycolor, rounded corners, very thick,->]
+        (root.west) |- (templ.west);
+\end{tikzpicture}
+ }
+    \end{minipage}
+\end{frame}
+    
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}[t]
+    \frametitle{BAG technology definition module}
+    \begin{minipage}{.68\linewidth}
+            \begin{itemize}
+                \item BAG\_prim contain the Virtuoso primitives.
+                \item tech\_config.yaml referenced in bag\_config.yaml
+                \item tech\_params.yaml referenced in
+                    BAG\_technology\_definition/\_\_init\_\_.py
+                    \vfill
+            \end{itemize}
+        \end{minipage}
+        \begin{minipage}{.28\linewidth}
+    \resizebox{\linewidth}{!}{%
+\begin{tikzpicture}[every node/.style={inner sep=1ex,outer sep=0}]
+\tikzstyle{dir}=[draw=black, rounded corners, 
+                fill=secondarycolor!10, drop shadow,
+                align=center, anchor=west, text=black, rectangle, minimum
+                width=2cm,
+            minimum height=0.5cm] 
+\tikzstyle{file}=[ align=left, anchor=west, text=black, rectangle, minimum
+                width=2cm,
+            minimum height=0.5cm] 
+            \node[anchor=west](root)
+            [dir]{\textbf{Bag\_technology\_definition}};
+            \node[anchor=west, below right = 1.0 cm and 0.5cm of root.west](prim)
+            [dir]{\textbf{BAG\_prim}};
+            \node[anchor=west, below right = 1.0 cm and 0.0cm of
+            prim.west](techdef)
+            [dir]{\textbf{BAG\_technology\_definition}};
+            \node[anchor=west, below right = 1.0 cm and 0.5cm of
+            techdef.west](initt)
+            [file]{\_\_init\_\_.py};
+            \node[anchor=west, below right = 0.5 cm and 0.0cm of
+            initt.west](techyaml)
+            [file]{tech\_config.yaml};
+            \node[anchor=west, below right = 0.5 cm and 0.0cm of
+            techyaml.west](techparams)
+            [file]{tech\_params.yaml};
+            \node[anchor=west, below right = 0.5 cm and 0.0cm of
+            techparams.west](techpy)
+            [file]{tech.py};
+            \node[anchor=west, below right = 1.0 cm and -0.5cm of
+            techpy.west](techprim)
+            [dir]{\textbf{Technology\_primitives}};
+            \node[anchor=west, below right = 1.0 cm and 0.5cm of
+            techprim.west](techprimbag)
+            [dir]{\textbf{BAG\_prim}};
+            \node[anchor=west, below right = 1.0 cm and 0.5cm of
+        techprimbag.west](init)
+            [file]{\_\_init\_\_.py};
+            \node[anchor=west, below right = 0.5 cm and 0.0cm of
+            init.west](techprimpy)
+            [file]{nmos4\_fast.py};
+            \node[anchor=west, below right = 0.5 cm and 0.0cm of
+            techprimpy.west](techprimpy2)
+            [file]{$\vdots$};
+            \draw[>=latex,primarycolor, rounded corners, very thick,->]
+        (root.west) |- (prim.west);
+            \draw[>=latex,primarycolor, rounded corners, very thick,->]
+        (root.west) |- (techdef.west);
+            \draw[>=latex,primarycolor, rounded corners, very thick,->]
+        (techdef.west) |- (initt.west);
+            \draw[>=latex,primarycolor, rounded corners, very thick,->]
+        (techdef.west) |- (techyaml.west);
+            \draw[>=latex,primarycolor, rounded corners, very thick,->]
+        (techdef.west) |- (techparams.west);
+            \draw[>=latex,primarycolor, rounded corners, very thick,->]
+        (techdef.west) |- (techpy.west);
+            \draw[>=latex,primarycolor, rounded corners, very thick,->]
+        (root.west) |- (techprim.west);
+            \draw[>=latex,primarycolor, rounded corners, very thick,->]
+        (techprim.west) |- (techprimbag.west);
+            \draw[>=latex,primarycolor, rounded corners, very thick,->]
+        (techprimbag.west) |- (init.west);
+            \draw[>=latex,primarycolor, rounded corners, very thick,->]
+        (techprimbag.west) |- (techprimpy.west);
+            \draw[>=latex,primarycolor, rounded corners, very thick,->]
+        (techprimbag.west) |- (techprimpy2.west);
+\end{tikzpicture}
+}
+ \end{minipage}
 
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}[t]
+    \frametitle{BAG design generator module}
+    \begin{minipage}{.68\linewidth}
+            \begin{itemize}
+                \item Python package
+                    \begin{itemize}
+                        \item Module and class layout layout generation code (for this design only). 
+                        \item Module and class schematic for schematic generation code. 
+                        \item Information import handled by bag\_ecd class
+                        \item Generator calls defined in bag\_ecd.bag\_design
+                            class.
+                    \end{itemize}
+            \end{itemize}
+        \end{minipage}
+        \begin{minipage}{.28\linewidth}
+    \resizebox{\linewidth}{!}{%
+\begin{tikzpicture}[every node/.style={inner sep=1ex,outer sep=0}]
+\tikzstyle{dir}=[draw=black, rounded corners, 
+                fill=secondarycolor!10, drop shadow,
+                align=center, anchor=west, text=black, rectangle, minimum
+                width=2cm,
+            minimum height=0.5cm] 
+\tikzstyle{file}=[ align=left, anchor=west, text=black, rectangle, minimum
+                width=2cm,
+            minimum height=0.5cm] 
+            \node[anchor=west](root)
+            [dir]{\textbf{<module\_name}};
+            \node[anchor=west, below right = 1.0 cm and 0.5cm of
+            root.west](templates)
+            [dir]{\textbf{<module>\_templates}};
+            \node[anchor=west, below right = 1.0 cm and 0.0cm of
+            prim.west](module)
+            [dir]{\textbf{<module\_name>}};
+            \node[anchor=west, below right = 1.0 cm and 0.5cm of
+            techdef.west](initt)
+            [file]{\_\_init\_\_.py};
+            \node[anchor=west, below right = 0.5 cm and 0.0cm of
+            initt.west](layout)
+            [file]{layout.py};
+            \node[anchor=west, below right = 0.5 cm and 0.0cm of
+            layout.west](schematic)
+            [file]{schematic.py};
+            \node[anchor=west, below right = 1.0 cm and -0.5cm of
+            techpy.west](testbenches)
+            [dir]{\textbf{(<module\_testbenches)}};
+            \draw[>=latex,primarycolor, rounded corners, very thick,->]
+        (root.west) |- (templates.west);
+            \draw[>=latex,primarycolor, rounded corners, very thick,->]
+        (root.west) |- (module.west);
+            \draw[>=latex,primarycolor, rounded corners, very thick,->]
+        (module.west) |- (initt.west);
+            \draw[>=latex,primarycolor, rounded corners, very thick,->]
+        (module.west) |- (layout.west);
+            \draw[>=latex,primarycolor, rounded corners, very thick,->]
+        (module.west) |- (schematic.west);
+            \draw[>=latex,primarycolor, rounded corners, very thick,->]
+        (root.west) |- (testbenches.west);
+\end{tikzpicture}
+}
+ \end{minipage}
+
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}[t]
+    \frametitle{BAG ECD design structure definition module}
+    \begin{minipage}{.68\linewidth}
+            \begin{itemize}
+                \item Python package
+                    \begin{itemize}
+                        \item Bag\_ecd class as parent adds the essential bag
+                            modules and all generator modules to PYTHONPATH
+                            automatically during generator invocation.
+                        \item Bag\_ecd.bag\_design class:
+                            \begin{itemize}
+                                \item Defines common parameters for all
+                                    designs.
+                                \item Defines a method \emph{import\_design}  for importing the template
+                                    information to python environment.
+                                \item Defines method \emph{generate} that
+                                    imports the design and generates the
+                                    schematic and layout with help of methods
+                                    defines layout
+                                    and schematic classes of the design.
+                            \end{itemize}
+                    \end{itemize}
+            \end{itemize}
+        \end{minipage}
+        \begin{minipage}{.28\linewidth}
+    \resizebox{\linewidth}{!}{%
+\begin{tikzpicture}[every node/.style={inner sep=1ex,outer sep=0}]
+\tikzstyle{dir}=[draw=black, rounded corners, 
+                fill=secondarycolor!10, drop shadow,
+                align=center, anchor=west, text=black, rectangle, minimum
+                width=2cm,
+            minimum height=0.5cm] 
+\tikzstyle{file}=[ align=left, anchor=west, text=black, rectangle, minimum
+                width=2cm,
+            minimum height=0.5cm] 
+            \node[anchor=west](root)
+            [dir]{\textbf{bag\_ecd}};
+            \node[anchor=west, below right = 1.0 cm and 0.5cm of
+            root.west](module)
+            [dir]{\textbf{bag\_ecd}};
+            \node[anchor=west, below right = 1.0 cm and 0.5cm of
+            module.west](initt)
+            [file]{\_\_init\_\_.py};
+            \node[anchor=west, below right = 0.5 cm and 0.0cm of
+            initt.west](design)
+            [file]{bag\_design.py};
+            \draw[>=latex,primarycolor, rounded corners, very thick,->]
+        (root.west) |- (module.west);
+            \draw[>=latex,primarycolor, rounded corners, very thick,->]
+        (module.west) |- (initt.west);
+            \draw[>=latex,primarycolor, rounded corners, very thick,->]
+        (module.west) |- (design.west);
+%            \draw[>=latex,primarycolor, rounded corners, very thick,->]
+%        (module.west) |- (schematic.west);
+%            \draw[>=latex,primarycolor, rounded corners, very thick,->]
+%        (root.west) |- (testbenches.west);
+\end{tikzpicture}
+}
+ \end{minipage}
+
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}[t]
+    \frametitle{Further actions}
+    \begin{itemize}
+        \item  A generic BAG\_technology\_definition  (Cadence gpdk) with ECD-compatible structure
+        \item  A process generic example design using bag\_ecd structure
+            virtuoso setup for Cadence gpdk
+        \item Documentation with docstrings
+        \item If willing to contribute, contact
+            \\\emph{marko.kosunen@aalto.fi} ,\\
+            or file an issue.
+    \end{itemize}
+\end{frame}
 \end{document}

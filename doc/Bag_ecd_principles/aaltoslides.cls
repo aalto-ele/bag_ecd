@@ -5,6 +5,7 @@
 
 \RequirePackage{aaltologo}
 \RequirePackage{graphicx,color}
+%\RequirePackage{enumitem}
 
 
 \LoadClass{beamer}
@@ -18,6 +19,13 @@
 
 \newif\iffooter\footertrue
 \newif\ifnormaltitle\normaltitlefalse
+
+%Itemize environment
+%\setlist[itemize]{leftmargini=1ex}
+
+\setlength\leftmargini {0ex}
+\setlength\leftmarginii {1.5ex}
+\setlength\leftmarginiii {1.5ex}
 
 % AALTO COLORS DEFINED IN AALTOLOGO
 

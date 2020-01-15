@@ -1,0 +1,29 @@
+\begin{tikzpicture}[every node/.style={inner sep=0ex,outer sep=0}]
+\tikzstyle{item}=[draw=black, rounded corners, 
+                fill=secondarycolor!10, drop shadow,
+                align=center, anchor=center, text=black, ellipse, minimum
+                width=3cm,
+            minimum height=2cm] 
+\node (n1) [item]{Design and\\verification};
+\node (ntext) [above = 0.2 cm of n1.north, rectangle, align=center,
+text=black, inner sep=1ex, outer sep=1ex]  {Domain of
+programmatic abstraction };
+\node[ anchor=north, below =2cm of n1.south] (n2) [item]{Implementation\\tools};
+\node[ below = 2cm of n2] (n3) [item]{Implementation\\control};
+\node[ anchor=north, below left = 2cm and 5cm of n1.south ] (n4) [item]{Digital\\design};
+\node[ anchor=north, below right = 2cm and 5cm of n1.south ] (n5)
+[item]{Analog\\design};
+\draw[>=latex,primarycolor, very thick,<->] (n1.south) to [out=270,in=90]
+(n2.north);
+\draw[>=latex,primarycolor,very thick,<->] (n2.south) to [out=270,in=90]
+(n3.north);
+\draw[>=latex,primarycolor,very thick,<->] (n1.west) to [out=180,in=90] (n4.north);
+\draw[>=latex,primarycolor,very thick,<->] (n1.east) to [out=0,in=90] (n5.north);
+\draw[>=latex,primarycolor,very thick,<->] (n4.east) to [out=0,in=180]
+(n2.west);
+\draw[>=latex,primarycolor,very thick,<->] (n2.east) to [out=0,in=180]
+(n5.west);
+\filldraw [name=outer,  fill=aaltoBlue, fill opacity=0.1 ] (-7,-7.5) rectangle (7,2.5);
+\filldraw [name=inner, fill=white, fill opacity=0.5 ] (-3,-4.5) rectangle (3,-1.5);
+%\fillbetween [of=inner, fill=aaltoGreen, fill opacity=0.3 ] (-3,-4.5) rectangle (3,-1.5);
+\end{tikzpicture}
