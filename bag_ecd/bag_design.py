@@ -18,7 +18,7 @@ from bag_ecd import bag_startup
 import bag
 from bag.layout import RoutingGrid, TemplateDB
 from BAG_technology_definition import BAG_technology_definition 
-
+import pdb
 class bag_design(BAG_technology_definition,metaclass=abc.ABCMeta):
 
     @property
@@ -223,8 +223,8 @@ class bag_design(BAG_technology_definition,metaclass=abc.ABCMeta):
         print('Generating layout ...')
         layout_template= tdb.new_template(params=self.layout_params, temp_cls=self.layout, debug=True)
         tdb.instantiate_layout(self.bag_project, layout_template, self.name, debug=True)
+        self.sch_params['sch_dummy_info']=layout_template.sch_dummy_info
         print('Finished implementing layout')
-
 
         ##This implements schematic
         print('Generating schematic ...')
