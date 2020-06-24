@@ -223,7 +223,7 @@ class bag_design(BAG_technology_definition,metaclass=abc.ABCMeta):
         print('Generating layout ...')
         layout_template= tdb.new_template(params=self.layout_params, temp_cls=self.layout, debug=True)
         tdb.instantiate_layout(self.bag_project, layout_template, self.name, debug=True)
-        self.sch_params['sch_dummy_info']=layout_template.sch_dummy_info
+        self.sch_params = layout_template.sch_params
         print('Finished implementing layout')
 
         ##This implements schematic
