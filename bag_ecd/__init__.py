@@ -44,6 +44,7 @@ class bag_startup(metaclass=abc.ABCMeta):
 
     sys.path.append(os.environ['BAG_FRAMEWORK'])
     sys.path.append(os.environ['BAG_TECH_CONFIG_DIR'])
+    sys.path.append(os.path.join(os.environ['BAG_TECH_CONFIG_DIR'], 'BAG_prim/layouts'))
     sys.path.append(os.path.join(os.environ['BAG_WORK_DIR'], 'BAG2_TEMPLATES_EC'))
 
     # Lets read the BAG config pyhhon dictionary
