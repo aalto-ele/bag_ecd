@@ -226,7 +226,10 @@ class bag_design(BAG_technology_definition,metaclass=abc.ABCMeta):
         if hasattr(layout_template, 'sch_dummy_info'):
             print('sch_dummy_info should be included in sch_params! Including it now!')
             self.sch_params.update({'sch_dummy_info' : layout_template.sch_dummy_info})
-        self.sch_params = layout_template.sch_params
+        
+        #Update the schematic parameters from the layout
+        self.sch_params.update(layout_template.sch_params)
+
         print('Finished implementing layout')
 
         ##This implements schematic
