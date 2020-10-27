@@ -127,7 +127,6 @@ class bag_design(BAG_technology_definition,metaclass=abc.ABCMeta):
         new_lib_path=bag_project.bag_config['new_lib_path']
         schematic_generator=thispath+'/'+'schematic.py'
         tempgenfile=thispath+'/'+'schematic_temp.py'
-
         #Check if schematic generator already exists
         packagename=bag_home+'/'+new_lib_path+'/'+template_library+ '/'+cell+'.py'
         if os.path.isfile(packagename):
@@ -146,7 +145,9 @@ class bag_design(BAG_technology_definition,metaclass=abc.ABCMeta):
         
         elif os.path.isfile(schematic_generator):
             print('Schematic generator exists at %s. Trying to map that to generated one.' %(schematic_generator))
-            
+            print('Copying schematic generator to %s ' %(packagename))
+            # This needs to be done, as new_package is now True, meaning that there is file at packagename!
+            copy2(schematic_generator, packagename)
             # Test is schematic class exists in the schematic generator
             with open(schematic_generator, 'r') as generator_file:
                 if not 'class schematic(Module):' in generator_file.read():
@@ -159,9 +160,9 @@ class bag_design(BAG_technology_definition,metaclass=abc.ABCMeta):
                     inputfile=open(packagename, 'r').readlines()
                     tempfile=open(tempgenfile, 'w')
                     done = False
-                      
+                       
                     for line in inputfile:
-                        if re.match('from bag.design.module import Module',line):
+                        if re.match('from bag.design import Module',line):
                             tempfile.write('from %s.schematic import schematic as %s__%s\n' %(cell,template_library,cell))
                         else:
                             pass
@@ -185,7 +186,7 @@ class bag_design(BAG_technology_definition,metaclass=abc.ABCMeta):
             done = False
 
             for line in inputfile:
-                if re.match('from bag.design.module import Module',line):
+                if re.match('from bag.design import Module',line):
                     tempfile.write('from %s.schematic import schematic as %s__%s\n' 
                             %(cell,template_library,cell))
                 else:
@@ -212,7 +213,6 @@ class bag_design(BAG_technology_definition,metaclass=abc.ABCMeta):
 
     def generate(self):
         self.import_design()
-
         dsn = self.bag_project.create_design_module(self.template_library_name, self.name)
         print('Creating template library and cell')
         
