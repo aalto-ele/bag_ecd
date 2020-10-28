@@ -23,10 +23,10 @@ DESCRIPTION
    Run this from the Virtuoso directory. 
 
 OPTIONS
-  -t  
-       Target module name
-  -w 
-      Working directory. Default: current directory.
+  -t
+      Define the name of of the module.
+  -c  
+      Change template class to AnalogBase. Default = TemplateBase
   -h
       Show this help.
 EOF
@@ -37,18 +37,25 @@ TARGETNAME=""
 FORCE="0"
 BASECLASS="TemplateBase"
 
-while getopts cs:t:h opt
+while getopts ct:h opt
 do
   case "$opt" in
     c) BASECLASS="AnalogBase";;
     t) TARGETNAME=${OPTARG};;
-    w) WORKDIR=${OPTARG};;
-    f) FORCE="1";;    
     h) help_f; exit 0;;
     \?) help_f;;
   esac
 done
+
+# Check if module name was given
+if [ -z "$TARGETNAME" ]; then
+    echo "test"
+    help_f
+    exit 1
+fi
+
 MODULENAME=$(basename ${TARGETNAME})
+
 # Construct template import clause 
 if [ ${BASECLASS} == "TemplateBase" ]; then
     IMPORTSTR="from bag.layout.template import TemplateBase"
@@ -275,7 +282,7 @@ ${IMPORTSTR}
 class layout(${BASECLASS}):
 
     def __init__(self, temp_db, lib_name, params, used_names, **kwargs):
-        TemplateBase.__init__(self, temp_db, lib_name, params, used_names, **kwargs)
+        ${BASECLASS}.__init__(self, temp_db, lib_name, params, used_names, **kwargs)
     
     @classmethod
     def get_default_param_values(cls):
@@ -321,7 +328,7 @@ class ${MODULENAME}(layout):
     Class to be used as template in higher level layouts
     '''
     def __init__(self, temp_db, lib_name, params, used_names, **kwargs):
-        TemplateBase.__init__(self, temp_db, lib_name, params, used_names, **kwargs)
+        ${BASECLASS}.__init__(self, temp_db, lib_name, params, used_names, **kwargs)
 
 EOF
 ## END HERE DOCUMENT
@@ -384,6 +391,17 @@ EOF
 
 # Init the git repo without remote
 git init
+
+echo "Creating .gitignore"
+## BEGIN HERE FILE
+cat << EOF > .gitignore
+*.swp
+*~
+*.cdslck
+*.pyc
+Makefile
+EOF
+## END HERE FILE
 
 echo "Done."
 echo "IMPORTANT! In order to run the generator, first run ./configure,"
