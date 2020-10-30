@@ -145,9 +145,6 @@ class bag_design(BAG_technology_definition,metaclass=abc.ABCMeta):
         
         elif os.path.isfile(schematic_generator):
             print('Schematic generator exists at %s. Trying to map that to generated one.' %(schematic_generator))
-            print('Copying schematic generator to %s ' %(packagename))
-            # This needs to be done, as new_package is now True, meaning that there is file at packagename!
-            copy2(schematic_generator, packagename)
             # Test is schematic class exists in the schematic generator
             with open(schematic_generator, 'r') as generator_file:
                 if not 'class schematic(Module):' in generator_file.read():
@@ -177,7 +174,7 @@ class bag_design(BAG_technology_definition,metaclass=abc.ABCMeta):
             # One cell per directory. Import others from other generators
             os.path.dirname(os.path.realpath(self._classfile)) + "/"+__name__
             print('Copying schematic generator to %s ' %(thispath+'/schematic.py'))
-            copy2(packagename,schematic_generator)
+            copy2(packagename, schematic_generator)
       
             # First we generate a template to be transferred to
             # new_lib_path (BAGHOME/BagModules/template_library/cell.py

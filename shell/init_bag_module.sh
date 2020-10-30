@@ -26,7 +26,9 @@ OPTIONS
   -t
       Define the name of of the module.
   -c  
-      Change template class to AnalogBase. Default = TemplateBase
+      Change template class to AnalogBase. Default: TemplateBase.
+  -w
+      Working directory. Default: current directory.
   -h
       Show this help.
 EOF
@@ -34,14 +36,14 @@ EOF
 THISDIR=`pwd`
 WORKDIR=${THISDIR}
 TARGETNAME=""
-FORCE="0"
 BASECLASS="TemplateBase"
 
-while getopts ct:h opt
+while getopts ct:w:h opt
 do
   case "$opt" in
     c) BASECLASS="AnalogBase";;
     t) TARGETNAME=${OPTARG};;
+    w) WORKDIR=${OPTARG};;
     h) help_f; exit 0;;
     \?) help_f;;
   esac
