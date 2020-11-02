@@ -137,7 +137,6 @@ class bag_design(BAG_technology_definition,metaclass=abc.ABCMeta):
         #Importing template library
         bag_project.import_design_library(template_library)
 
-
         # Schematic generator should be a submodule in THIS directory
         if not newpackage:
             # Schematic generator already existed
@@ -159,7 +158,7 @@ class bag_design(BAG_technology_definition,metaclass=abc.ABCMeta):
                     done = False
                        
                     for line in inputfile:
-                        if re.match('from bag.design import Module',line):
+                        if re.match('from bag.design.module import Module',line):
                             tempfile.write('from %s.schematic import schematic as %s__%s\n' %(cell,template_library,cell))
                         else:
                             pass
@@ -183,7 +182,7 @@ class bag_design(BAG_technology_definition,metaclass=abc.ABCMeta):
             done = False
 
             for line in inputfile:
-                if re.match('from bag.design import Module',line):
+                if re.match('from bag.design.module import Module',line):
                     tempfile.write('from %s.schematic import schematic as %s__%s\n' 
                             %(cell,template_library,cell))
                 else:
