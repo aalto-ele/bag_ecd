@@ -117,7 +117,6 @@ PEXOPTS="\
     -v \"VDD VSS\" \
     -S \"VDD\" \
     -t ${TECHLIB} \
-    -x 
 "
 
 DRC="\${BAG_WORK_DIR}/shell/drc.sh" 
