@@ -340,7 +340,7 @@ import os
 import pkg_resources
 import pdb
 from bag.design import Module
-yaml_file = pkg_resources.resource_filename(__name__, os.path.join('../../BagModules/${MODULENAME}_templates', 'netlist_info', '${MODULENAME}.yaml'))
+yaml_file = os.path.join(f'{os.environ["BAG_WORK_DIR"]}/BagModules/${MODULENAME}_templates', 'netlist_info', '${MODULENAME}.yaml')
 
 
 # noinspection PyPep8Naming

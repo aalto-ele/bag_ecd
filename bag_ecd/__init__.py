@@ -58,10 +58,20 @@ class bag_startup(metaclass=abc.ABCMeta):
     GENERATORS=[(x[1]) for x in os.walk( BAGHOME)][0]
     #Add automatically the files from BAGHOME
     MODULEPATHS=[]
+    DIR=os.path.abspath(os.getcwd())
+    # This should be BAG_WORK_DIR if executed from BAG_WORK_DIR
+    DIR2=os.path.commonpath([DIR,os.environ['BAG_WORK_DIR']])
+    MODULELIST = [path.split('/')[-1] for path in sys.path]
     for i in GENERATORS:
-        if os.path.isfile(BAGHOME+"/" + i +"/" + i + "/__init__.py"):
-            MODULEPATHS.append(BAGHOME+"/" + i)
-    
+        if DIR2==os.environ['BAG_WORK_DIR']:
+            if os.path.isfile(BAGHOME+"/" + i +"/" + i + "/__init__.py"):
+                MODULEPATHS.append(BAGHOME+"/" + i)
+        else:
+            # Do not add module to path if already added by TheSyDeKick
+            if i not in MODULELIST:
+                if os.path.isfile(BAGHOME+"/" + i +"/" + i + "/__init__.py"):
+                    MODULEPATHS.append(BAGHOME+"/" + i)
+
 
     for i in list(set(MODULEPATHS)-set(sys.path)):
         print("Adding %s to system path" %(i))
