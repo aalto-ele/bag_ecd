@@ -18,6 +18,7 @@ from bag_ecd import bag_startup
 import bag
 from bag.layout import RoutingGrid, TemplateDB
 from BAG_technology_definition import BAG_technology_definition 
+from abs_templates_ec.analog_core.base import AnalogBase
 import pdb
 class bag_design(BAG_technology_definition,metaclass=abc.ABCMeta):
 
@@ -77,11 +78,20 @@ class bag_design(BAG_technology_definition,metaclass=abc.ABCMeta):
         This practice garantees the designs to be track-compatible within the process.
         '''
         if (not hasattr(self,'_routing_grid')):
-            self._routing_grid= RoutingGrid(self.bag_project.tech_info, self.grid_opts['layers'], 
-                self.grid_opts['spaces'], 
-                self.grid_opts['widths'], 
-                self.grid_opts['bot_dir'], 
-                width_override=self.grid_opts['width_override'])
+            mos_conn_layer=self.bag_project.tech_info.config['mos']['ana_conn_layer']
+            # If template is AnalogBase and conn_layer is even, change bottom dir so that via generation is possible
+            if AnalogBase in self.layout.__bases__ and mos_conn_layer % 2 == 0:
+                self._routing_grid= RoutingGrid(self.bag_project.tech_info, self.grid_opts['layers'], 
+                    self.grid_opts['spaces'], 
+                    self.grid_opts['widths'], 
+                    bot_dir='x', 
+                    width_override=self.grid_opts['width_override'])
+            else:
+                self._routing_grid= RoutingGrid(self.bag_project.tech_info, self.grid_opts['layers'], 
+                    self.grid_opts['spaces'], 
+                    self.grid_opts['widths'], 
+                    self.grid_opts['bot_dir'], 
+                    width_override=self.grid_opts['width_override'])
             return self._routing_grid
         else:
             return self._routing_grid
