@@ -64,11 +64,44 @@ class bag_design(BAG_technology_definition,metaclass=abc.ABCMeta):
     
     @property
     def layout_params(self):
-        if (not hasattr(self,'draw_params')): 
-            #or (not hasattr(self,'sch_params')):
-                raise Exception('Attributes draw_params and sch_params must be defined')
+        '''
+        Dictionary of layout parameters. The keys (e.g. the parameters) are defined in layout generators
+        get_params_info() classmethod. The corresponding values should be defined as properties (with setters)
+        in the __init__ of each BAG module. This makes it possible to set generator parameters as Python attributes
+        in external Python modules such as the SDK.
+
+        Strategy for parsing:
+            1. Loop over the layout parameters defined in layout generator (keys)
+            2. __init__ of module must have corresponding property
+            3. Set property as value for the key
+        '''
+        if not hasattr(self, '_layout_params'):
+            if (not hasattr(self,'draw_params')) and (not hasattr(self,'sch_params')): # New type of generator, no dictionaries in __init__.py
+                self._layout_params=dict()
+                for key in self.layout.get_params_info(): # This classmethod must exist in every layout generator
+                     try:
+                         self._layout_params[key]=getattr(self, key)
+                     except AttributeError:
+                         raise Exception('Parameter %s defined in layout generator not defined in __init__ of %s!' % (key, type(self).__name__))
+            elif hasattr(self, 'draw_params') and hasattr(self, 'sch_params'): # For backwards compatibility
+                self._layout_params={**self.sch_params, **self.draw_params}
+            return self._layout_params
         else:
-            return {**self.sch_params, **self.draw_params}
+            return self._layout_params
+               
+    @property
+    def sch_params(self):
+        '''
+        Dictionary of schematic parameters. These are a subset of layout parameters and are parsed in layout generator.
+        Setter is provided for backwards compatibility to older generators, which utilize dictionaries for storing parameters.
+        '''
+        if not hasattr(self, '_sch_params'):
+            self._sch_params={}
+        return self._sch_params
+    @sch_params.setter
+    def sch_params(self, val):
+        self._sch_params=val
+
 
     @property
     def routing_grid(self):
