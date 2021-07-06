@@ -76,15 +76,15 @@ class bag_design(BAG_technology_definition,metaclass=abc.ABCMeta):
             3. Set property as value for the key
         '''
         if not hasattr(self, '_layout_params'):
-            if (not hasattr(self,'draw_params')) and (not hasattr(self,'sch_params')): # New type of generator, no dictionaries in __init__.py
+            if hasattr(self, 'draw_params') and hasattr(self, 'sch_params'): # Old type generators, for backwards compatibility
+                self._layout_params={**self.sch_params, **self.draw_params}
+            elif not hasattr(self,'draw_params'): # New type of generator, no dictionaries in __init__.py
                 self._layout_params=dict()
                 for key in self.layout.get_params_info(): # This classmethod must exist in every layout generator
                      try:
                          self._layout_params[key]=getattr(self, key)
                      except AttributeError:
                          raise Exception('Parameter %s defined in layout generator not defined in __init__ of %s!' % (key, type(self).__name__))
-            elif hasattr(self, 'draw_params') and hasattr(self, 'sch_params'): # For backwards compatibility
-                self._layout_params={**self.sch_params, **self.draw_params}
             return self._layout_params
         else:
             return self._layout_params
