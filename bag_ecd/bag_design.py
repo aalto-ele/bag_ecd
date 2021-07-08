@@ -128,6 +128,55 @@ class bag_design(BAG_technology_definition, bag_startup,metaclass=abc.ABCMeta):
         else:
             return self._routing_grid
 
+    #Common method to propagate system parameters
+    # Copied from thesdk class (https://github.com/TheSystemDevelopmentKit/thesdk)
+    def copy_propval(self,*arg):
+        ''' Method to copy attributes parent generator. 
+        
+        Example (use in parent generator __init__.py):
+
+           a=hierarchical_generator(self)
+
+        Attributes listed in proplist attribute of 'hierarchical_generator' are copied from
+        self to a. Impemented by including following code at the end of __init__ method 
+        of every generator:
+        
+            if len(arg)>=1:
+                parent=arg[0]
+                self.copy_propval(parent,self.proplist)
+                self.parent =parent;
+
+        Note: self.aliases (defined in generator) provides mapping between top-level parameter names to lower level parameter names.
+        This is done in order to allow setting same parameter (e.g. transistor width) using a different name for
+        top and lower level generators.
+
+        '''
+           
+        if len(arg)>=2:
+            self.parent=arg[0]
+            self.proplist=arg[1]
+            for i in range(len(self.proplist)):
+                # Check first that parameter has corresponding entry in aliases
+                if self.proplist[i] in self.aliases.keys():
+                    param_key=self.aliases[self.proplist[i]]
+                    if param_key=='aliases' or self.proplist[i]=='aliases': # DONT DO THIS!
+                        self.print_log(type='F', msg='Cannot set aliases via proplist!')
+                    if hasattr(self,param_key):
+                    #Its nice to see how things propagate
+                        if  hasattr(self.parent,self.proplist[i]):
+                            msg="Setting %s: %s to %s" %(self.__class__.__name__, self.proplist[i], getattr(self.parent,self.proplist[i]))
+                            self.print_log(type= 'I', msg=msg)
+                            setattr(self,self.proplist[i],getattr(self.parent,self.proplist[i]))
+                        else:
+                            self.print_log(type='W', msg='Parent generator %s doesn\'t define parameter %s! Omitting!' \
+                                    % (self.parent.__class__.__name__, self.proplist[i]))
+                    else:
+                        self.print_log(type='W', msg='%s doesn\'t define parameter %s! Omitting!' \
+                                % (self.__class__.__name__, param_key))
+                else:
+                    self.print_log(type='W', msg='Alias for key %s isn\'t defined in %s.aliases! Omitting!' \
+                            % (self.proplist[i],self.__class__.__name__))
+
 
     def import_design(self):
         ''' 
@@ -247,7 +296,7 @@ class bag_design(BAG_technology_definition, bag_startup,metaclass=abc.ABCMeta):
             self.print_log(msg='You need to re-run this to have mapped generators in effect') 
             quit()
         #
-        self.print_log(msg='Netlist import done\n')
+        self.print_log(msg='Netlist import done')
 
     def generate(self):
         self.import_design()
