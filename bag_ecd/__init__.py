@@ -125,7 +125,6 @@ class bag_startup(metaclass=abc.ABCMeta):
         fid.write("%s %s %s: %s\n" %(time.strftime("%H:%M:%S"),typestr, __class__.__name__ , msg))
         fid.close()
 
-    #Common properties
     @property
     def DEBUG(self):
         ''' Global attribute to setup a debug mode True | Falsw '''
@@ -139,51 +138,50 @@ class bag_startup(metaclass=abc.ABCMeta):
 
     #Method for logging
     #This is a method because it uses the logfile property
-    def print_log(self,argdict={'type': 'I', 'msg': "Print this to log"} ):
-        if not os.path.isfile(thesdk.logfile):
+    def print_log(self,**kwargs):
+        type=kwargs.get('type', 'I')
+        msg=kwargs.get('msg', 'Print this to the log')
+        if not os.path.isfile(bag_startup.logfile):
             typestr="INFO at "
-            msg="Inited logging in %s" %(thesdk.logfile)
-            fid= open(thesdk.logfile, 'a')
-            print("%s %s thesdk: %s" %(time.strftime("%H:%M:%S"), typestr , msg))
-            fid.write("%s %s thesdk: %s\n" %(time.strftime("%H:%M:%S"), typestr, msg))
+            msg="Inited logging in %s" %(bag_startup.logfile)
+            fid= open(bag_startup.logfile, 'a')
+            print("%s %s bag_startup: %s" %(time.strftime("%H:%M:%S"), typestr , msg))
+            fid.write("%s %s bag_startup: %s\n" %(time.strftime("%H:%M:%S"), typestr, msg))
             fid.close()
 
-        if argdict['type']== 'D':
+        if type== 'D':
             if self.DEBUG:
                 typestr="DEBUG at"
-                print("%s %s %s: %s" %(time.strftime("%H:%M:%S"), typestr, self.__class__.__name__ , argdict['msg'])) 
+                print("%s %s %s: %s" %(time.strftime("%H:%M:%S"), typestr, self.__class__.__name__ , msg)) 
                 if hasattr(self,"logfile"):
-                    fid= open(thesdk.logfile, 'a')
-                    fid.write("%s %s %s: %s\n" %(time.strftime("%H:%M:%S"), typestr, self.__class__.__name__ , argdict['msg'])) 
+                    fid= open(bag_startup.logfile, 'a')
+                    fid.write("%s %s %s: %s\n" %(time.strftime("%H:%M:%S"), typestr, self.__class__.__name__ , msg)) 
             return
-        elif argdict['type']== 'I':
+        elif type== 'I':
            typestr="INFO at "
-           print("%s %s %s: %s" %(time.strftime("%H:%M:%S"), typestr, self.__class__.__name__ , argdict['msg'])) 
-        elif argdict['type']=='W':
+           print("%s %s %s: %s" %(time.strftime("%H:%M:%S"), typestr, self.__class__.__name__ , msg)) 
+        elif type=='W':
            typestr="WARNING! at"
-           print("%s %s %s: %s" %(time.strftime("%H:%M:%S"), typestr, self.__class__.__name__ , argdict['msg'])) 
-        elif argdict['type']=='E':
+           print("%s %s %s: %s" %(time.strftime("%H:%M:%S"), typestr, self.__class__.__name__ , msg)) 
+        elif type=='E':
            typestr="ERROR! at"
-           print("%s %s %s: %s" %(time.strftime("%H:%M:%S"), typestr, self.__class__.__name__ , argdict['msg'])) 
+           print("%s %s %s: %s" %(time.strftime("%H:%M:%S"), typestr, self.__class__.__name__ , msg)) 
 
-        elif argdict['type']=='F':
+        elif type=='F':
            typestr="FATAL ERROR! at"
-           print("%s %s %s: %s" %(time.strftime("%H:%M:%S"), typestr, self.__class__.__name__ , argdict['msg'])) 
+           print("%s %s %s: %s" %(time.strftime("%H:%M:%S"), typestr, self.__class__.__name__ , msg)) 
            print("Quitting due to fatal error in %s" %(self.__class__.__name__))
            if hasattr(self,"logfile"):
-               fid= open(thesdk.logfile, 'a')
+               fid= open(bag_startup.logfile, 'a')
                fid.write("%s Quitting due to fatal error in %s.\n" %( time.strftime("%H:%M:%S"), self.__class__.__name__))
                fid.close()
                quit()
         else:
            typestr="ERROR! at"
            msg="Incorrect message type. Choose one of 'D', 'I', 'E' or 'F'."
-           print("%s %s %s: %s" %(time.strftime("%H:%M:%S"), typestr, self.__class__.__name__ , argdict['msg'])) 
+           print("%s %s %s: %s" %(time.strftime("%H:%M:%S"), typestr, self.__class__.__name__ , msg)) 
 
         #If logfile set, print also there 
         if hasattr(self,"logfile"):
-            fid= open(thesdk.logfile, 'a')
-            fid.write("%s %s %s: %s\n" %(time.strftime("%H:%M:%S"), typestr, self.__class__.__name__ , argdict['msg'])) 
-
-
-
+            fid= open(bag_startup.logfile, 'a')
+            fid.write("%s %s %s: %s\n" %(time.strftime("%H:%M:%S"), typestr, self.__class__.__name__ , msg)) 

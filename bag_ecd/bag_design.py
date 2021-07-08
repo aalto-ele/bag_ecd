@@ -8,6 +8,7 @@ guarantee design portability.
 '''
 import sys
 import os
+import time
 import abc
 from abc import *
 from shutil import copy2
@@ -19,7 +20,7 @@ import bag
 from bag.layout import RoutingGrid, TemplateDB
 from BAG_technology_definition import BAG_technology_definition 
 import pdb
-class bag_design(BAG_technology_definition,metaclass=abc.ABCMeta):
+class bag_design(BAG_technology_definition, bag_startup,metaclass=abc.ABCMeta):
 
     @property
     @abstractmethod
@@ -39,7 +40,7 @@ class bag_design(BAG_technology_definition,metaclass=abc.ABCMeta):
         if hasattr(self,'_bag_project'):
             return self._bag_project
         else:
-            print('Initializing BagProject')
+            self.print_log(msg='Initializing BagProject')
             self._bag_project = bag.BagProject()
             return self._bag_project
 
@@ -81,10 +82,18 @@ class bag_design(BAG_technology_definition,metaclass=abc.ABCMeta):
             elif not hasattr(self,'draw_params'): # New type of generator, no dictionaries in __init__.py
                 self._layout_params=dict()
                 for key in self.layout.get_params_info(): # This classmethod must exist in every layout generator
-                     try:
-                         self._layout_params[key]=getattr(self, key)
-                     except AttributeError:
-                         raise Exception('Parameter %s defined in layout generator not defined in __init__ of %s!' % (key, type(self).__name__))
+                    # check if attribute is defined in __init__
+                    if hasattr(self, key):
+                        self._layout_params[key]=getattr(self, key)
+                    # if parameter was not define in __init__, it might have default value in layout.py
+                    elif key in self.layout.get_default_param_values().keys(): 
+                        self.print_log(msg="Attribute %s not defined in %s/__init__.py, but is given default value in layout generator" \
+                                % (key, type(self).__name__))
+                        self.print_log(msg="Consider defining it explicitly in __init__.py in order to provide access to paramter")
+                    # Parameter was not defined anywhere, raise error
+                    else:
+                        raise self.print_log(type='F',msg='Parameter %s defined in layout generator not defined in __init__ of %s or as an optional parameter!'\
+                                % (key, type(self).__name__))
             return self._layout_params
         else:
             return self._layout_params
@@ -119,6 +128,7 @@ class bag_design(BAG_technology_definition,metaclass=abc.ABCMeta):
         else:
             return self._routing_grid
 
+
     def import_design(self):
         ''' 
         Method to import Virtuoso templates to BAG environment
@@ -152,10 +162,10 @@ class bag_design(BAG_technology_definition,metaclass=abc.ABCMeta):
         cell=self.name
 
         # Import the templates
-        print('Importing netlist from virtuoso\n')
+        self.print_log(msg='Importing netlist from virtuoso\n')
         
         # Path definitions 
-        bag_home=bag_startup.BAGHOME
+        bag_home=self.BAGHOME
         thispath=os.path.dirname(os.path.realpath(self._classfile))
         new_lib_path=bag_project.bag_config['new_lib_path']
         schematic_generator=thispath+'/'+'schematic.py'
@@ -173,18 +183,18 @@ class bag_design(BAG_technology_definition,metaclass=abc.ABCMeta):
         # Schematic generator should be a submodule in THIS directory
         if not newpackage:
             # Schematic generator already existed
-            print('Schematic generator exists in %s' %(packagename))
+            self.print_log(msg='Schematic generator exists in %s' %(packagename))
         
         elif os.path.isfile(schematic_generator):
-            print('Schematic generator exists at %s. Trying to map that to generated one.' %(schematic_generator))
+            self.print_log(msg='Schematic generator exists at %s. Trying to map that to generated one.' %(schematic_generator))
             # Test is schematic class exists in the schematic generator
             with open(schematic_generator, 'r') as generator_file:
                 if not 'class schematic(Module):' in generator_file.read():
-                    print('Existing generator does not contain schematic class')
-                    print('Not compatible with this generator structure.\n Exiting')
+                    self.print_log(msg='Existing generator does not contain schematic class')
+                    self.print_log(msg='Not compatible with this generator structure.\n Exiting')
                     quit()
                 else:
-                    print('Mapping %s to generated class.' %(schematic_generator))
+                    self.print_log(msg='Mapping %s to generated class.' %(schematic_generator))
                     #Here, figure out what to do with the generated module AND _new_ generator
                     inputfile=open(packagename, 'r').readlines()
                     tempfile=open(tempgenfile, 'w')
@@ -198,14 +208,14 @@ class bag_design(BAG_technology_definition,metaclass=abc.ABCMeta):
                             #tempfile.write(line) 
                     tempfile.close()
                     os.rename(tempgenfile, packagename)
-                    print('We need to re-run this to have mapped generators in effect') 
+                    self.print_log(msg='We need to re-run this to have mapped generators in effect') 
                     quit()
 
         else:
             # Transfer schematic generator to thispath/schematic.py
             # One cell per directory. Import others from other generators
             os.path.dirname(os.path.realpath(self._classfile)) + "/"+__name__
-            print('Copying schematic generator to %s ' %(thispath+'/schematic.py'))
+            self.print_log(msg='Copying schematic generator to %s ' %(thispath+'/schematic.py'))
             copy2(packagename, schematic_generator)
       
             # First we generate a template to be transferred to
@@ -234,36 +244,35 @@ class bag_design(BAG_technology_definition,metaclass=abc.ABCMeta):
             tempfile.close()
             os.rename(tempgenfile, schematic_generator)
             os.rename(tempgenfile, packagename)
-            #bag_startup.print_log({'type':'I','msg':'You need to re-run this to have mapped generators in effect'}) 
-            print('We need to re-run this to have mapped generators in effect') 
+            self.print_log(msg='You need to re-run this to have mapped generators in effect') 
             quit()
         #
-        print('Netlist import done\n')
+        self.print_log(msg='Netlist import done\n')
 
     def generate(self):
         self.import_design()
         dsn = self.bag_project.create_design_module(self.template_library_name, self.name)
-        print('Creating template library and cell')
+        self.print_log(msg='Creating template library and cell')
         
         #This is an instance of template database from bag templates
         #Parameters to TemplateDb
         tdb = TemplateDB('template_libs.def', self.routing_grid, self.implementation_library_name, use_cybagoa=True)
         #This is a instance of a template created with template database
-        print('Generating layout ...')
+        self.print_log(msg='Generating layout ...')
         layout_template= tdb.new_template(params=self.layout_params, temp_cls=self.layout, debug=True)
         tdb.instantiate_layout(self.bag_project, layout_template, self.name, debug=True)
         if hasattr(layout_template, 'sch_dummy_info'):
-            print('sch_dummy_info should be included in sch_params! Including it now!')
+            self.print_log(msg='sch_dummy_info should be included in sch_params! Including it now!')
             self.sch_params.update({'sch_dummy_info' : layout_template.sch_dummy_info})
         
         #Update the schematic parameters from the layout
         self.sch_params.update(layout_template.sch_params)
 
-        print('Finished implementing layout')
+        self.print_log(msg='Finished implementing layout')
 
         ##This implements schematic
-        print('Generating schematic ...')
+        self.print_log(msg='Generating schematic ...')
         dsn.design(**self.sch_params)
         dsn.implement_design(self.implementation_library_name, top_cell_name=self.name)
-        print('Finished implementing schematic')
+        self.print_log(msg='Finished implementing schematic')
 
