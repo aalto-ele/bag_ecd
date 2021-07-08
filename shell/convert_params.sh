@@ -61,7 +61,6 @@ fi
 
 modulepath="${currdir}/${module}/${module}"
 genpath="${modulepath}/__init__.py"
-echo "$genpath"
 if [ -f "$genpath" ]; then
     echo "Found __init__.py in ${modulepath}"
 else
