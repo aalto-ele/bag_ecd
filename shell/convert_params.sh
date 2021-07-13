@@ -57,10 +57,9 @@ while getopts cd:m:pt:w:h opt
 do
     case "$opt" in
         c) commit="1";;
-        d) dependencies=${OPTARG};;
+        d) dependencies=(${OPTARG});;
         m) module=${OPTARG};;
         p) preserve="1";;
-        t) tabstop=${OPTARG};;
         w) currdir=${OPTARG};;
         h) help_f; exit 0;;
         \?) help_f;;
@@ -75,13 +74,15 @@ fi
 
 # Generate imports based on dependcies
 if [ ${#dependencies[@]} -gt 0 ]; then
-    layout_importstr="#Use these to get layout & sch parameters for respective generators:"$'\n'"from ${module}.schematic import schematic"
-    sch_importstr="${sch_importstr}"$'\n'"#Use these to get sch parameters for respective generators:"
+    layout_importstr="#Use these to get layout & sch parameters for respective generators:"$'\\\n'"from ${module}.schematic import schematic"
+    sch_importstr="${sch_importstr}"$'\\\n'"#Use these to get sch parameters for respective generators:"
+    init_importstr="${init_importstr}"$'\n'"#Use these to instantiate generators down in hierarchy:"
     for ((i=0; i<${#dependencies[@]}; i++));
     do
         dep=${dependencies[$i]}
-        layout_importstr="${layout_importstr}"$'\n'"from ${dep}.layout import layout as ${dep}_layout"
-        sch_importstr="${sch_importstr}"$'\n'"from ${dep}.schematic import schematic as ${dep}_sch"
+        init_importstr="${init_importstr}"$'\n'"from ${dep} import ${dep}"
+        layout_importstr="${layout_importstr}"$'\\\n'"from ${dep}.layout import layout as ${dep}_layout"
+        sch_importstr="${sch_importstr}"$'\\\n'"from ${dep}.schematic import schematic as ${dep}_sch"
     done
 fi
 
@@ -121,101 +122,102 @@ draw_start=$((${pos_draw[0]} + 1))
 draw_end=$((${pos_draw[1]} - 1))
 sch_start=$((${pos_sch[0]} + 1))
 sch_end=$((${pos_sch[1]} - 1))
-
-
-# Find linenumber for __init__ definition
-init_start=$(awk '/\sdef __init__\(self\):/{print NR;exit}' ${genpath})
-if [[ "$init_start" == -1 ]]; then
-    echo "__init__.py doesn't declare __init__ function! Exiting!"
-    exit 1
-else
-    echo "__init__ declaration found on line ${init_start}"
-fi
-
-if [ -z ${tabstop} ]; then
-    # Read number of spaces used for intendation and try match that
-    tabstop=$(($(awk "FNR==$init_start"'{print gsub("[[:blank:]]",""); exit}' ${genpath})-1))
-    tabs=$(for i in $(seq 1 $tabstop); do echo -n " "; done)
-    echo "Tabstop not set, detected as ${tabstop}"
-else
-    echo "Tabstop is set as ${tabstop}"
-fi
-
-init_start=$((${init_start}-1)) # Decrement, since we want to print properties before __init__
-
-# Find min and max from positions. Used to extract remainder of __init__ file
-positions=("${pos_draw[@]}" "${pos_sch[@]}")
-min=${positions[0]}
-max=${positions[0]}
-for i in "${positions[@]}";
-do
-    (( i > max )) && max=$i
-    (( i < min )) && min=$i
-done
-
-# Print all lines before __init__ declaration
-awk "FNR<=$init_start"'{print}' ${genpath} >> ${modulepath}/tmp 
+# Format line numbers as awk conditions 
+pattern_draw="NR>=${draw_start}&&NR<=${draw_end}"
+pattern_sch="NR>=${sch_start}&&NR<=${sch_end}"
 
 # Print generic properties used for all generators
 cat << EOF >> ${modulepath}/tmp
 
-${tabs}def __getattr__(self, name):
-${tabs}${tabs}'''
-${tabs}${tabs}Reason for this is given in below link:
-${tabs}${tabs}https://stackoverflow.com/questions/4017572/how-can-i-make-an-alias-to-a-non-function-member-attribute-in-a-python-class
-${tabs}${tabs}'''
-${tabs}${tabs}if name=='aliases':
-${tabs}${tabs}${tabs}raise AttributeError
-${tabs}${tabs}return object.__getattribute__(self, name)
+'''
+=========
+${module}
+=========
+'''
+import os
+from bag_ecd.bag_design import bag_design
 
-${tabs}@property
-${tabs}def aliases(self):
-${tabs}${tabs}'''
-${tabs}${tabs}Mapping between top-level generator parameter name and name of parameter defined in this generator.
-${tabs}${tabs}This provides a convenient way of controlling same parameter (e.g. 'lch') for each of the generators
-${tabs}${tabs}in the hierarchy.
+from ${module}.layout import layout
+${init_importstr}
 
-${tabs}${tabs}Key gives top-level parameter name, value gives name for this generator
-${tabs}${tabs}'''
-${tabs}${tabs}if not hasattr(self, '_aliases'):
-${tabs}${tabs}${tabs}self._aliases={}
-${tabs}${tabs}return self._aliases
-${tabs}@aliases.setter
-${tabs}def aliases(self, val):
-${tabs}${tabs}self._aliases=val
+class ${module}(bag_design):
 
-${tabs}@property
-${tabs}def parent(self):
-${tabs}${tabs}'''
-${tabs}${tabs}Parent generator in hieararchy. Set automatically
-${tabs}${tabs}'''
-${tabs}${tabs}if not hasattr(self, '_parent'):
-${tabs}${tabs}${tabs}self._parent=None
-${tabs}${tabs}return self._parent
-${tabs}@parent.setter
-${tabs}def parent(self, val):
-${tabs}${tabs}self._parent=val
+    def get_hierarchical_params(self):
+        '''
+        Group lower level generator parameters into one dictionary per generator.
+        Now layout generator can expect parameters in single dict for all sub-templates.
+        '''
+        for dep in self.dependencies:
+            dep_params=getattr(self, dep).layout_params
+            setattr(self, dep+'_params', dep_params)
+    
+    def __getattr__(self, name):
+        '''
+        Reason for this is given in below link:
+        https://stackoverflow.com/questions/4017572/how-can-i-make-an-alias-to-a-non-function-member-attribute-in-a-python-class
+        '''
+        if name=='aliases':
+            raise AttributeError
+        return object.__getattribute__(self, name)
 
-${tabs}@property
-${tabs}def proplist(self):
-${tabs}${tabs}'''
-${tabs}${tabs}List of property names to be copied from parent . Set from
-${tabs}${tabs}keys of self.aliases
-${tabs}${tabs}'''
-${tabs}${tabs}if not hasattr(self, '_proplist'):
-${tabs}${tabs}${tabs}self._proplist=list(self.aliases.keys())
-${tabs}${tabs}return self._proplist
+    @property
+    def _classfile(self):
+        return os.path.dirname(os.path.realpath(__file__)) + "/"+__name__
+
+    @property
+    def aliases(self):
+        '''
+        Mapping between top-level generator parameter name and name of parameter defined in this generator.
+        This provides a convenient way of controlling same parameter (e.g. 'lch') for each of the generators
+        in the hierarchy.
+
+        Key gives top-level parameter name, value gives name for this generator
+        '''
+        if not hasattr(self, '_aliases'):
+            self._aliases={}
+        return self._aliases
+    @aliases.setter
+    def aliases(self, val):
+        self._aliases=val
+
+    @property
+    def parent(self):
+        '''
+        Parent generator in hieararchy. Set automatically
+        '''
+        if not hasattr(self, '_parent'):
+            self._parent=None
+        return self._parent
+    @parent.setter
+    def parent(self, val):
+        self._parent=val
+
+    @property
+    def dependencies(self):
+        if not hasattr(self, '_dependencies'):
+            self._dependencies=[]
+        return self._dependencies
+    @dependencies.setter
+    def dependencies(self,val):
+        self._dependencies=val
+
+    @property
+    def proplist(self):
+        '''
+        List of property names to be copied from parent . Set from
+        keys of self.aliases
+        '''
+        if not hasattr(self, '_proplist'):
+            self._proplist=list(self.aliases.keys())
+        return self._proplist
 EOF
 
-## Find draw and schematic parameters, write to tmp file as Python properties
-pattern_draw="NR>=${draw_start}&&NR<=${draw_end}"
-pattern_sch="NR>=${sch_start}&&NR<=${sch_end}"
-
-# For some reason, AWK doesn't seem to obey the tabstop set by tabs.
+# For some reason, awk doesn't obey tabstop set by tabs
+tabstop=4
+# Using awk, write sch_params and draw_params contents as Python properties 
 sed -e 's/,*$//g' ${genpath} | awk -v tabstop="$tabstop" -F':' "$pattern_draw"'{gsub(/ /,"");
     gsub(/\047/,"",$1); # Replace single quote with blank from dict key
     printf("\n");
-    # This is a hack to create same intendation as in target file
     for(i=1;i<=tabstop;i++) {printf " "};
     printf "@property\n";
     for(i=1;i<=tabstop;i++) {printf " "};
@@ -268,31 +270,38 @@ sed -e 's/,*$//g' ${genpath} | awk -v tabstop="$tabstop" -F':' "$pattern_sch"'{g
     for(i=1;i<=2*tabstop;i++) {printf " "};
     printf "self._%s=val\n", $1;
 }' >> ${modulepath}/tmp 
-# Print everything from __init__ definition to just before the start of parameter defitions to tmp file
-awk "FNR<=(($min-1))&&FNR>$((init_start-1))"'{print}' ${genpath} >> ${modulepath}/tmp
-
 
 cat << EOF >> ${modulepath}/tmp
-${tabs}${tabs}if len(arg) >=1:
-${tabs}${tabs}${tabs}parent=arg[0]
-${tabs}${tabs}${tabs}self.copy_propval(parent, self.proplist)
-${tabs}${tabs}${tabs}self.parent=parent
-EOF
-# Print everything from the stop of parameter definitions to the end of file to tmp file
-awk "FNR>=(($max+1))"'{print}' ${genpath} >> ${modulepath}/tmp
+    def __init__(self, *arg):
+        if len(arg) >=1:
+            parent=arg[0]
+            self.copy_propval(parent, self.plotlist)
+            self.parent=parent
+        self.get_hierarchical_params()
+        self.layout=layout
 
-# Add args to init for proplist
-sed -i 's/def __init__(self):/def __init__(self, *arg):/g' ${modulepath}/tmp
+if __name__=='__main__':
+    from ${module} import ${module}
+    inst=${module}()
+    inst.generate()
+
+EOF
 
 if [ "${preserve}" == "1" ]; then
     echo "Preserving old generator and configure!"
     mv ${genpath} ${modulepath}/__init__.old
     mv ${moduleroot}/configure ${moduleroot}/configure.old
+    cp ${modulepath}/layout.py ${modulepath}/layout.old
+    cp ${modulepath}/schematic.py ${modulepath}/schematic.old
 else
     echo "Preserve flag not set, deleting old generator and configure"
     rm -f ${genpath} 
     rm -f ${moduleroot}/configure
 fi
+# Print dependency import into file 
+sed -i "/from [a-z\.]* import [A-Z]*[a-z]*Base/a\ ${layout_importstr}" ${modulepath}/layout.py
+sed -i "/from bag.design import Module/a\ ${sch_importstr}" ${modulepath}/schematic.py
+
 echo "Renaming tmp file to __init__.py"
 # Rename tmp file as the new generator
 mv ${modulepath}/tmp ${genpath}
