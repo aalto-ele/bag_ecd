@@ -1,6 +1,13 @@
 #!/bin/sh
 # Exit immediately on error:
-set -e
+set -eE -o functrace
+
+failure() {
+#    local lineno=$1
+#    local msg=$2
+    echo "Failed on line $1: $2"
+}
+trap 'failure ${LINENO} "$BASH_COMMAND"' ERR
 
 help_f()
 {
@@ -23,6 +30,9 @@ OPTIONS
   -c
       git add && commit changes to git repository
       with message "convert generator to new parameter convention"
+  -d
+      List of generator dependendencies. Example: -d "generator_1 generator_2 generator_3"
+      Used for hierarchical designs.
   -m
       Module name to operate on
   -p
@@ -63,11 +73,25 @@ if [ -z "$module" ]; then
     exit 1
 fi
 
-# Prepend module to dependices as well
+# Generate imports based on dependcies
+if [ ${#dependencies[@]} -gt 0 ]; then
+    layout_importstr="#Use these to get layout & sch parameters for respective generators:"$'\n'"from ${module}.schematic import schematic"
+    sch_importstr="${sch_importstr}"$'\n'"#Use these to get sch parameters for respective generators:"
+    for ((i=0; i<${#dependencies[@]}; i++));
+    do
+        dep=${dependencies[$i]}
+        layout_importstr="${layout_importstr}"$'\n'"from ${dep}.layout import layout as ${dep}_layout"
+        sch_importstr="${sch_importstr}"$'\n'"from ${dep}.schematic import schematic as ${dep}_sch"
+    done
+fi
+
+# Append module to dependices as well (needed for Makefile)
 dependencies=("${dependencies[@]}" "$module")
 modulepath="${currdir}/${module}/${module}"
 moduleroot="${currdir}/${module}"
 genpath="${modulepath}/__init__.py"
+layoutpath="${modulepath}/layout.py"
+schpath="${modulepath}/schematic.py"
 if [ -f "$genpath" ]; then
     echo "Found __init__.py in ${modulepath}"
 else
@@ -155,7 +179,7 @@ ${tabs}${tabs}Key gives top-level parameter name, value gives name for this gene
 ${tabs}${tabs}'''
 ${tabs}${tabs}if not hasattr(self, '_aliases'):
 ${tabs}${tabs}${tabs}self._aliases={}
-${tabs}${tabs}return self.aliases
+${tabs}${tabs}return self._aliases
 ${tabs}@aliases.setter
 ${tabs}def aliases(self, val):
 ${tabs}${tabs}self._aliases=val
@@ -167,7 +191,7 @@ ${tabs}${tabs}Parent generator in hieararchy. Set automatically
 ${tabs}${tabs}'''
 ${tabs}${tabs}if not hasattr(self, '_parent'):
 ${tabs}${tabs}${tabs}self._parent=None
-${tabs}${tabs}return self.parent
+${tabs}${tabs}return self._parent
 ${tabs}@parent.setter
 ${tabs}def parent(self, val):
 ${tabs}${tabs}self._parent=val
@@ -180,7 +204,7 @@ ${tabs}${tabs}keys of self.aliases
 ${tabs}${tabs}'''
 ${tabs}${tabs}if not hasattr(self, '_proplist'):
 ${tabs}${tabs}${tabs}self._proplist=list(self.aliases.keys())
-${tabs}${tabs}return self.proplist
+${tabs}${tabs}return self._proplist
 EOF
 
 ## Find draw and schematic parameters, write to tmp file as Python properties
@@ -265,7 +289,7 @@ if [ "${preserve}" == "1" ]; then
     mv ${genpath} ${modulepath}/__init__.old
     mv ${moduleroot}/configure ${moduleroot}/configure.old
 else
-    echo "Preserve flag not set, deleting old generator"
+    echo "Preserve flag not set, deleting old generator and configure"
     rm -f ${genpath} 
     rm -f ${moduleroot}/configure
 fi
@@ -273,11 +297,6 @@ echo "Renaming tmp file to __init__.py"
 # Rename tmp file as the new generator
 mv ${modulepath}/tmp ${genpath}
 
-if [ "${commit}" == "1" ]; then
-    echo "Commiting changes"
-    git add ${genpath}
-    git commit -m "Convert generator to new parameter convention"
-fi
 
 if [ ! -d "${moduleroot}/doc" ]; then
     echo "Documentation directory doesn't exist, creating.."
@@ -287,8 +306,22 @@ fi
 author=`git config --global user.name`
 currdir=`pwd`
 cd ${moduleroot}/doc
-sphinx-quickstart --sep -p "${module}" -a "${author}" -r "1.0" -l "en"
+sphinx-quickstart --sep -p "${module}" -a "${author}" -r "1.0" -l "en" --ext-autodoc --ext-intersphinx --ext-imgmath --ext-ifconfig --ext-viewcode
 cd ${currdir}
+
+# Add napoleon extension for sphinx
+sed -i "/extensions = \[/a    'sphinx.ext.napoleon'," ${moduleroot}/doc/source/conf.py
+# Change imports
+sed -i "s/# import/import/g" ${moduleroot}/doc/source/conf.py
+sed -i "s/# sys.path/sys.path/g" ${moduleroot}/doc/source/conf.py
+sed -i "s|abspath('.')|abspath('../../')|g" ${moduleroot}/doc/source/conf.py
+# Change themse for sphinx doc
+sed -i "s/alabaster/sphinx_rtd_theme/g" ${moduleroot}/doc/source/conf.py
+# Change toctree to include all relevant modules (__init__, layout, schematic)
+sed -i "s/:maxdepth: 2/:maxdepth: 3/g" ${moduleroot}/doc/source/index.rst
+sed -i "/:caption: Contents:/a .. automodule:: ${module}\n   :members:\n   :undoc-members:\n"\
+".. automodule:: ${module}.layout\n   :members:\n   :undoc-members:\n"\
+".. automodule:: ${module}.schematic\n   :members:\n   :undoc-members:\n" ${moduleroot}/doc/source/index.rst
 
 # Parse strings for defining dependencies, their generation runs and the dependencies them selves
 for ((i=0; i<${#dependencies[@]}; i++));
@@ -449,3 +482,12 @@ exit 0
 HERE
 
 chmod +x ${moduleroot}/configure
+# Git commit, if specified
+if [ "${commit}" == "1" ]; then
+    echo "Commiting changes"
+    git add ${genroot}
+    git commit -m "Convert generator to new parameter convention"
+fi
+
+exit 0
+
