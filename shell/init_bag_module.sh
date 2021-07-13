@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/sh
 #############################################################################
 # This script creates a new ECD structured BAG module 
 #
@@ -23,10 +23,13 @@ DESCRIPTION
    Run this from the Virtuoso directory. 
 
 OPTIONS
-  -t
-      Define the name of of the module.
   -c  
       Change template class to AnalogBase. Default: TemplateBase.
+  -d
+      List of generator dependendencies. Example: -d "generator_1 generator_2 generator_3"
+      Used for hierarchical designs.
+  -t
+      Define the name of of the module.
   -w
       Working directory. Default: current directory.
   -h
@@ -38,10 +41,11 @@ WORKDIR=${THISDIR}
 TARGETNAME=""
 BASECLASS="TemplateBase"
 
-while getopts ct:w:h opt
+while getopts cd:t:w:h opt
 do
   case "$opt" in
     c) BASECLASS="AnalogBase";;
+    d) DEPENDENCIES=(${OPTARG});;
     t) TARGETNAME=${OPTARG};;
     w) WORKDIR=${OPTARG};;
     h) help_f; exit 0;;
@@ -60,10 +64,25 @@ MODULENAME=$(basename ${TARGETNAME})
 
 # Construct template import clause 
 if [ ${BASECLASS} == "TemplateBase" ]; then
-    IMPORTSTR="from bag.layout.template import TemplateBase"
+    LAYOUT_IMPORTSTR="from bag.layout.template import TemplateBase"$'\n'"from ${MODULENAME} import ${MODULENAME}.schematic"
 else
-    IMPORTSTR="from abs_templates_ec.analog_core import AnalogBase"
+    LAYOUT_IMPORTSTR="from abs_templates_ec.analog_core import AnalogBase"$'\n'"from ${MODULENAME} import ${MODULENAME}.schematic"
 fi
+
+if [ ${#DEPENDENCIES[@]} -gt 0 ]; then
+    LAYOUT_IMPORTSTR="${LAYOUT_IMPORTSTR}"$'\n'"#Use these to get layout parameters for respective generators:"
+    SCH_IMPORTSTR="${SCH_IMPORTSTR}"$'\n'"#Use these to get sch parameters for respective generators:"
+    for ((i=0; i<${#DEPENDENCIES[@]}; i++));
+    do
+        DEP=${DEPENDENCIES[$i]}
+        INIT_IMPORTSTR="${INIT_IMPORTSTR}"$'\n'"from ${DEP} import ${DEP}"
+        LAYOUT_IMPORTSTR="${LAYOUT_IMPORTSTR}"$'\n'"from ${DEP}.layout import layout as ${DEP}_layout"
+        SCH_IMPORTSTR="${SCH_IMPORTSTR}"$'\n'"from ${DEP}.schematic import schematic as ${DEP}_sch"
+    done
+fi
+
+# Add module to dependencies, needed for makefile
+DEPENDENCIES=("${DEPENDENCIES[@]}" "$MODULENAME")
 
 echo "Creating module ${MODULENAME}"
 
@@ -78,8 +97,16 @@ mkdir ${MODULENAME}/${MODULENAME}_testbenches
 cd ${MODULENAME}
 echo "Creating configure"
 
-## BEGIN HERE DOCUMENT
-cat << 'HERE' > "configure"
+# Generate depencies for Makefile
+for ((i=0; i<${#DEPENDENCIES[@]}; i++));
+do
+    DEP=${DEPENDENCIES[$i]}
+    DEP_DEF_STR="${DEP_DEF_STR}DEP${i} := \\\${BAG_WORK_DIR}/BagModules/${DEP}_templates/netlist_info/${DEP}.yaml"$'\n'
+    DEP_GEN_STR="${DEP_GEN_STR}\\\$(DEP${i}):"$'\n'$'\t'"cd \\\${BAG_WORK_DIR} && \\\${BAG_PYTHON} \\\${BAG_WORK_DIR}/${DEP}/${DEP}/__init__.py"$'\n'
+    DEP_STR="${DEP_STR} \\\$(DEP${i})" 
+done
+## BEGIN HERE DOCUMENT (split into parts to avoid escaping all dollar signs
+cat << 'HERE' > configure
 #!/bin/sh
 MODULENAME=$(basename $(cd $(dirname ${0}) && pwd) ) 
 MODULELOCATION=$(cd `dirname ${0}`/.. && pwd )
@@ -146,6 +173,15 @@ PEXOPTS =  ${PEXOPTS//    }
 DRC = ${DRC//    }
 DRCOPTS =  ${DRCOPTS//    }
 
+HERE
+
+# Split document into parts, since I can't be bothered with escaping all dollar signs..
+cat << HERE >> configure
+${DEP_DEF_STR}
+HERE
+
+cat << 'HERE' >> configure
+
 # Runs that are used in mutiple places
 define gen-run =
 cd \${BAG_WORK_DIR} && \\
@@ -162,14 +198,21 @@ cd \${BAG_WORK_DIR} && \\
 \$(PEX) \$(PEXOPTS)
 endef
 
-.PHONY: all gen lvs drc pex clean
+.PHONY: all doc gen lvs drc pex clean
 
 # gen twice for initial mapping
 all: gen lvs drc pex
 
 # Yaml file is generated with very first run that requires re-execution
 # Therefore the dependency
-gen: \${BAG_WORK_DIR}/BagModules/${MODULENAME}_templates/netlist_info/${MODULENAME}.yaml
+doc:
+	cd \${BAG_WORK_DIR}/${MODULENAME}/doc && make html
+
+HERE
+cat << HERE >> configure
+gen: ${DEP_STR} 
+HERE
+cat << 'HERE' >> configure
 	\$(gen-run)
 
 lvs: \${BAG_WORK_DIR}/${MODULENAME}_generated/${MODULENAME}/layout/layout.oa
@@ -183,9 +226,13 @@ drc: \${BAG_WORK_DIR}/${MODULENAME}_lvs_run/${MODULENAME}.calibre.db
     \$(DRC) \$(DRCOPTS)
 
 # Ensure re-generation if dependency missing
-\${BAG_WORK_DIR}/BagModules/${MODULENAME}_templates/netlist_info/${MODULENAME}.yaml:
-	\$(gen-run)
+HERE
 
+cat << HERE >> configure
+${DEP_GEN_STR}
+HERE
+
+cat << 'HERE' >> configure
 \${BAG_WORK_DIR}/${MODULENAME}_generated/${MODULENAME}/layout/layout.oa:
 	\$(gen-run)
 
@@ -206,6 +253,7 @@ EOF
 exit 0
 
 HERE
+
 ## END HERE DOCUMENT
 echo "Setting permission of configure to 774"
 chmod 774 configure
@@ -243,16 +291,61 @@ class ${MODULENAME}(bag_design):
     def _classfile(self):
         return os.path.dirname(os.path.realpath(__file__)) + "/"+__name__
 
-    def __init__(self):
-        # Define layout parameters:
-        self.draw_params={
-        
-        }
-        # Define schematic parameters:
-        self.sch_params={ 
-        
-        } 
+    def __getattr__(self, name):
+        '''
+        Reason for this is given in below link:
+        https://stackoverflow.com/questions/4017572/how-can-i-make-an-alias-to-a-non-function-member-attribute-in-a-python-class
+        '''
+        if name=='aliases':
+            raise AttributeError
+        return object.__getattribute__(self, name)
+
+    @property
+    def aliases(self):
+        '''
+        Mapping between top-level generator parameter name and name of parameter defined in this generator.
+        This provides a convenient way of controlling same parameter (e.g. 'lch') for each of the generators
+        in the hierarchy.
+
+        Key gives top-level parameter name, value gives name for this generator
+        '''
+        if not hasattr(self, '_aliases'):
+            self._aliases={}
+        return self.aliases
+    @aliases.setter
+    def aliases(self, val):
+        self._aliases=val
+
+    @property
+    def parent(self):
+        '''
+        Parent generator in hieararchy. Set automatically
+        '''
+        if not hasattr(self, '_parent'):
+            self._parent=None
+        return self.parent
+    @parent.setter
+    def parent(self, val):
+        self._parent=val
+
+    @property
+    def proplist(self):
+        '''
+        List of property names to be copied from parent . Set from
+        keys of self.aliases
+        '''
+        if not hasattr(self, '_proplist'):
+            self._proplist=list(self.aliases.keys())
+        return self.proplist
+
+    # Define template draw and schematic parameters below using property decorators:
+
+    def __init__(self, *arg):
         self.layout=layout
+        if len(arg) >= 1:
+            parent=arg[0]
+            self.copy_proval(parent, self.proplist)
+            self.parent=parent
 
 if __name__ == '__main__':
     from ${MODULENAME} import ${MODULENAME}
@@ -274,7 +367,7 @@ ${MODULENAME} layout
 import abc
 import pdb
 
-${IMPORTSTR}
+${LAYOUT_IMPORTSTR}
 ## DEFINE YOUR IMPORTS BELOW:
 
 
@@ -284,6 +377,7 @@ class layout(${BASECLASS}):
 
     def __init__(self, temp_db, lib_name, params, used_names, **kwargs):
         ${BASECLASS}.__init__(self, temp_db, lib_name, params, used_names, **kwargs)
+        self.aliases=kwargs.get('alises', None)
     
     @classmethod
     def get_default_param_values(cls):
@@ -320,8 +414,12 @@ class layout(${BASECLASS}):
     
     def draw_layout(self):
         # Define layout drawing procedure below:
-         
+        # HINT: You can easily assign layout parameters for lower level templates from
+        # self.params by setting them from dict (<classname>_layout.get_params_info())
+
         # Remember to pass the schematic parameters on to the schematic generator!
+        # HINT: You can easily parse schematic parameters from self.params by setting
+        # them from schematic.get_params_info()
         self.sch_params = dict()
 
 class ${MODULENAME}(layout):
@@ -340,6 +438,8 @@ import os
 import pkg_resources
 import pdb
 from bag.design import Module
+${SCH_IMPORTSTR}
+
 yaml_file = os.path.join(f'{os.environ["BAG_WORK_DIR"]}/BagModules/${MODULENAME}_templates', 'netlist_info', '${MODULENAME}.yaml')
 
 
@@ -399,6 +499,7 @@ cat << EOF > .gitignore
 *.swp
 *~
 *.cdslck
+*cdslck*
 *.pyc
 Makefile
 EOF
