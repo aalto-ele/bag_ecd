@@ -64,25 +64,22 @@ MODULENAME=$(basename ${TARGETNAME})
 
 # Construct template import clause 
 if [ ${BASECLASS} == "TemplateBase" ]; then
-    LAYOUT_IMPORTSTR="from bag.layout.template import TemplateBase"$'\n'"from ${MODULENAME} import ${MODULENAME}.schematic"
+    LAYOUT_IMPORTSTR="from bag.layout.template import TemplateBase"$'\n'"from ${MODULENAME}.schematic import schematic"
 else
-    LAYOUT_IMPORTSTR="from abs_templates_ec.analog_core import AnalogBase"$'\n'"from ${MODULENAME} import ${MODULENAME}.schematic"
+    LAYOUT_IMPORTSTR="from abs_templates_ec.analog_core import AnalogBase"$'\n'"from ${MODULENAME}.schematic import schematic"
 fi
 
 if [ ${#DEPENDENCIES[@]} -gt 0 ]; then
-    LAYOUT_IMPORTSTR="${LAYOUT_IMPORTSTR}"$'\n'"#Use these to get layout parameters for respective generators:"
-    SCH_IMPORTSTR="${SCH_IMPORTSTR}"$'\n'"#Use these to get sch parameters for respective generators:"
+    LAYOUT_IMPORTSTR="${LAYOUT_IMPORTSTR}"$'\n'"#Use these to get layout & sch parameters for respective generators:"
     for ((i=0; i<${#DEPENDENCIES[@]}; i++));
     do
         DEP=${DEPENDENCIES[$i]}
         INIT_IMPORTSTR="${INIT_IMPORTSTR}"$'\n'"from ${DEP} import ${DEP}"
-        LAYOUT_IMPORTSTR="${LAYOUT_IMPORTSTR}"$'\n'"from ${DEP}.layout import layout as ${DEP}_layout"
-        SCH_IMPORTSTR="${SCH_IMPORTSTR}"$'\n'"from ${DEP}.schematic import schematic as ${DEP}_sch"
+        LAYOUT_IMPORTSTR="${LAYOUT_IMPORTSTR}"$'\n'"from ${DEP}.layout import ${DEP}"
+        LAYOUT_IMPORTSTR="${LAYOUT_IMPORTSTR}"$'\n'"from ${DEP}.schematic import schematic as ${DEP}_sch"
     done
 fi
 
-# Add module to dependencies, needed for makefile
-DEPENDENCIES=("${DEPENDENCIES[@]}" "$MODULENAME")
 
 echo "Creating module ${MODULENAME}"
 
@@ -95,8 +92,260 @@ mkdir ${MODULENAME}/${MODULENAME}_templates
 mkdir ${MODULENAME}/${MODULENAME}_testbenches
 
 cd ${MODULENAME}
-echo "Creating configure"
 
+echo "Creating ${MODULENAME}/__init__.py"
+## BEGIN HERE DOCUMENT
+cat << EOF > "${MODULENAME}/__init__.py"
+'''
+${MODULENAME}
+======
+
+'''
+import os
+import pdb
+
+from bag_ecd import bag_startup 
+from bag_ecd.bag_design import bag_design
+
+import bag
+from bag.layout import RoutingGrid, TemplateDB
+
+#This is mandatory
+from ${MODULENAME}.layout import layout 
+${INIT_IMPORTSTR}
+
+class ${MODULENAME}(bag_design):
+
+    @property
+    def _classfile(self):
+        return os.path.dirname(os.path.realpath(__file__)) + "/"+__name__
+
+    def __getattr__(self, name):
+        '''
+        Reason for this is given in below link:
+        https://stackoverflow.com/questions/4017572/how-can-i-make-an-alias-to-a-non-function-member-attribute-in-a-python-class
+        '''
+        if name=='aliases':
+            raise AttributeError
+        return object.__getattribute__(self, name)
+
+    @property
+    def aliases(self):
+        '''
+        Mapping between top-level generator parameter name and name of parameter defined in this generator.
+        This provides a convenient way of controlling same parameter (e.g. 'lch') for each of the generators
+        in the hierarchy.
+
+        Key gives top-level parameter name, value gives name for this generator
+        '''
+        if not hasattr(self, '_aliases'):
+            self._aliases={}
+        return self._aliases
+    @aliases.setter
+    def aliases(self, val):
+        self._aliases=val
+
+    @property
+    def parent(self):
+        '''
+        Parent generator in hieararchy. Set automatically
+        '''
+        if not hasattr(self, '_parent'):
+            self._parent=None
+        return self._parent
+    @parent.setter
+    def parent(self, val):
+        self._parent=val
+
+EOF
+
+# Echo dependency param properties to file
+for i in "${DEPENDENCIES[@]}"; do
+    echo "    @property" >> ${MODULENAME}/__init__.py
+    echo "    def ${i}_params(self):" >> ${MODULENAME}/__init__.py
+    echo "        '''" >> ${MODULENAME}/__init__.py
+    echo "        Dictionary of parameters for sub-template ${i}" >> ${MODULENAME}/__init__.py
+    echo "        Remeber to add this entry to layout.py get_params_info() function!" >> ${MODULENAME}/__init__.py
+    echo "        '''" >> ${MODULENAME}/__init__.py
+    echo "        if not hasattr(self, '_${i}_params'):" >> ${MODULENAME}/__init__.py
+    echo "            self._${i}_params=self.${i}.layout_params" >> ${MODULENAME}/__init__.py
+    echo "        return self._${i}_params" >> ${MODULENAME}/__init__.py
+    echo "    @${i}_params.setter" >> ${MODULENAME}/__init__.py
+    echo "    def ${i}_params(self,val):" >> ${MODULENAME}/__init__.py
+    echo "        self.${i}_params=val" >> ${MODULENAME}/__init__.py
+    echo "" >> ${MODULENAME}/__init__.py
+done 
+
+cat << EOF >> "${MODULENAME}/__init__.py"
+    @property
+    def proplist(self):
+        '''
+        List of property names to be copied from parent . Set from
+        keys of self.aliases
+        '''
+        if not hasattr(self, '_proplist'):
+            self._proplist=list(self.aliases.keys())
+        return self._proplist
+
+    # Define template draw and schematic parameters below using property decorators:
+
+    def __init__(self, *arg):
+EOF
+# Echo dependency instantiation to file 
+if [ ${#DEPENDENCIES[@]} -gt 0 ]; then
+    echo "        # Instantiate dependcies with proplist" >> ${MODULENAME}/__init__.py
+fi
+for i in "${DEPENDENCIES[@]}"; do
+    echo "        self.${i}=${i}(self)" >> ${MODULENAME}/__init__.py
+done 
+cat << EOF >> "${MODULENAME}/__init__.py"
+        if len(arg) >= 1:
+            parent=arg[0]
+            self.copy_proval(parent, self.proplist)
+            self.parent=parent
+        self.layout=layout
+
+if __name__ == '__main__':
+    from ${MODULENAME} import ${MODULENAME}
+    inst=${MODULENAME}()
+    inst.generate()
+ 
+EOF
+
+## END HERE DOCUMENT
+
+echo "Creating ${MODULENAME}/layout.py"
+## BEGIN HERE DOCUMENT
+cat << EOF > "${MODULENAME}/layout.py"
+'''
+${MODULENAME} layout
+======
+
+'''
+import abc
+import pdb
+
+${LAYOUT_IMPORTSTR}
+## DEFINE YOUR IMPORTS BELOW:
+
+
+## END IMPORTS
+
+class layout(${BASECLASS}):
+
+    def __init__(self, temp_db, lib_name, params, used_names, **kwargs):
+        ${BASECLASS}.__init__(self, temp_db, lib_name, params, used_names, **kwargs)
+    
+    @classmethod
+    def get_default_param_values(cls):
+        """Returns a dictionary containing default parameter values.
+        Override this method to define default parameter values.  As good practice,
+        you should avoid defining default values for technology-dependent parameters
+        (such as channel length, transistor width, etc.), but only define default
+        values for technology-independent parameters (such as number of tracks).
+        Returns
+        -------
+        default_params : Dict[str, Any]
+            dictionary of default parameter values.
+        """
+        return dict(
+        )
+
+    @classmethod
+    def get_params_info(cls):
+        # type: () -> Dict[str, str]
+        """Returns a dictionary containing parameter descriptions.
+        Override this method to return a dictionary from parameter names to descriptions.
+        Returns
+        -------
+        param_info : Dict[str, str]
+            dictionary from parameter name to description.
+        """
+        return dict(
+            )
+
+    # DEFINE YOUR HELPER FUNCTIONS BELOW:
+
+
+    # END HELPER FUNCTION DEFS
+    
+    def draw_layout(self):
+        # Define layout drawing procedure below:
+
+        # Remember to pass the schematic parameters on to the schematic generator!
+        # HINT: You can easily parse schematic parameters from self.params by setting
+        # them from schematic.get_params_info().keys()
+        self.sch_params = dict()
+
+class ${MODULENAME}(layout):
+    '''
+    Class to be used as template in higher level layouts
+    '''
+    def __init__(self, temp_db, lib_name, params, used_names, **kwargs):
+        ${BASECLASS}.__init__(self, temp_db, lib_name, params, used_names, **kwargs)
+
+EOF
+## END HERE DOCUMENT
+echo "Creating ${MODULENAME}/schematic.py"
+## BEGIN HERE DOCUMENT
+cat << EOF > "${MODULENAME}/schematic.py"
+import os
+import pkg_resources
+import pdb
+from bag.design import Module
+
+yaml_file = os.path.join(f'{os.environ["BAG_WORK_DIR"]}/BagModules/${MODULENAME}_templates', 'netlist_info', '${MODULENAME}.yaml')
+
+
+# noinspection PyPep8Naming
+class schematic(Module):
+    """Module for library ${MODULENAME}_templates cell ${MODULENAME}.
+
+    Fill in high level description here.
+    """
+
+    def __init__(self, bag_config, parent=None, prj=None, **kwargs):
+        Module.__init__(self, bag_config, yaml_file, parent=parent, prj=prj, **kwargs)
+       
+    @classmethod
+    def get_params_info(cls):
+        # type: () -> Dict[str, str]
+        """Returns a dictionary from parameter names to descriptions.
+
+        Returns
+        -------
+        param_info : Optional[Dict[str, str]]
+            dictionary from parameter names to descriptions.
+        """
+        return dict(
+            )
+
+    def design(self, **kwargs):
+        """To be overridden by subclasses to design this module.
+
+        This method should fill in values for all parameters in
+        self.parameters.  To design instances of this module, you can
+        call their design() method or any other ways you coded.
+
+        To modify schematic structure, call:
+
+        rename_pin()
+        delete_instance()
+        replace_instance_master()
+        reconnect_instance_terminal()
+        restore_instance()
+        array_instance()
+        """
+        # Procedure to follow:
+        # 1. Extract schematic parameters from kwargs (these should be parsed per instance basis in layout generator)
+        # 2. Process the netlist, e.g. reconnect instances or rename pins
+        # 3. Call self.instances[inst_name].design(**inst_sch_params)
+
+EOF
+## END HERE FILE
+
+# Add module to dependencies, needed for makefile
+DEPENDENCIES=("${DEPENDENCIES[@]}" "$MODULENAME")
 # Generate depencies for Makefile
 for ((i=0; i<${#DEPENDENCIES[@]}; i++));
 do
@@ -105,6 +354,8 @@ do
     DEP_GEN_STR="${DEP_GEN_STR}\\\$(DEP${i}):"$'\n'$'\t'"cd \\\${BAG_WORK_DIR} && \\\${BAG_PYTHON} \\\${BAG_WORK_DIR}/${DEP}/${DEP}/__init__.py"$'\n'
     DEP_STR="${DEP_STR} \\\$(DEP${i})" 
 done
+
+echo "Creating configure"
 ## BEGIN HERE DOCUMENT (split into parts to avoid escaping all dollar signs
 cat << 'HERE' > configure
 #!/bin/sh
@@ -201,7 +452,7 @@ endef
 .PHONY: all doc gen lvs drc pex clean
 
 # gen twice for initial mapping
-all: gen lvs drc pex
+all: doc gen lvs drc pex
 
 # Yaml file is generated with very first run that requires re-execution
 # Therefore the dependency
@@ -241,9 +492,9 @@ cat << 'HERE' >> configure
 
 clean: 
 	sed -i "/${MODULENAME}_templates/d" \${BAG_WORK_DIR}/bag_libs.def
-	sed -i "/test_cell_templates/d" ${BAG_WORK_DIR}/cds.lib 
-	sed -i "/test_cell_testbenches/d" ${BAG_WORK_DIR}/cds.lib 
-	sed -i "/test_cell_generated/d" ${BAG_WORK_DIR}/cds.lib 
+	sed -i "/${MODULENAME}_templates/d" ${BAG_WORK_DIR}/cds.lib 
+	sed -i "/${MODULENAME}_testbenches/d" ${BAG_WORK_DIR}/cds.lib 
+	sed -i "/${MODULENAME}_generated/d" ${BAG_WORK_DIR}/cds.lib 
 	rm -rf  \${BAG_WORK_DIR}/BagModules/${MODULENAME}_templates
 	rm -rf  \${BAG_WORK_DIR}/${MODULENAME}_lvs_run
 	rm -rf  \${BAG_WORK_DIR}/${MODULENAME}_drc_run
@@ -265,232 +516,35 @@ To run the generator, first ./configure
 Then make gen
 EOF
 ## END HERE DOCUMENT
-echo "Creating ${MODULENAME}/__init__.py"
-## BEGIN HERE DOCUMENT
-cat << EOF > "${MODULENAME}/__init__.py"
-'''
-${MODULENAME}
-======
 
-'''
-import os
-import pdb
+# Init documentation
+AUTHOR=`git config --global user.name`
+CURRDIR=`pwd`
 
-from bag_ecd import bag_startup 
-from bag_ecd.bag_design import bag_design
+echo "Creating doc directory"
+mkdir ${CURRDIR}/doc
+cd ${CURRDIR}/doc
+echo "Initializing doc"
+sphinx-quickstart --sep -p "${MODULENAME}" -a "${AUTHOR}" -r "1.0" -l "en" --ext-autodoc --ext-intersphinx --ext-imgmath --ext-ifconfig --ext-viewcode
+cd ${CURRDIR}
+# Add napoleon extension for sphinx
+sed -i "/extensions = \[/a    'sphinx.ext.napoleon'," ${CURRDIR}/doc/source/conf.py
 
-import bag
-from bag.layout import RoutingGrid, TemplateDB
-
-#This is mandatory
-from ${MODULENAME}.layout import layout 
-
-class ${MODULENAME}(bag_design):
-
-    @property
-    def _classfile(self):
-        return os.path.dirname(os.path.realpath(__file__)) + "/"+__name__
-
-    def __getattr__(self, name):
-        '''
-        Reason for this is given in below link:
-        https://stackoverflow.com/questions/4017572/how-can-i-make-an-alias-to-a-non-function-member-attribute-in-a-python-class
-        '''
-        if name=='aliases':
-            raise AttributeError
-        return object.__getattribute__(self, name)
-
-    @property
-    def aliases(self):
-        '''
-        Mapping between top-level generator parameter name and name of parameter defined in this generator.
-        This provides a convenient way of controlling same parameter (e.g. 'lch') for each of the generators
-        in the hierarchy.
-
-        Key gives top-level parameter name, value gives name for this generator
-        '''
-        if not hasattr(self, '_aliases'):
-            self._aliases={}
-        return self.aliases
-    @aliases.setter
-    def aliases(self, val):
-        self._aliases=val
-
-    @property
-    def parent(self):
-        '''
-        Parent generator in hieararchy. Set automatically
-        '''
-        if not hasattr(self, '_parent'):
-            self._parent=None
-        return self.parent
-    @parent.setter
-    def parent(self, val):
-        self._parent=val
-
-    @property
-    def proplist(self):
-        '''
-        List of property names to be copied from parent . Set from
-        keys of self.aliases
-        '''
-        if not hasattr(self, '_proplist'):
-            self._proplist=list(self.aliases.keys())
-        return self.proplist
-
-    # Define template draw and schematic parameters below using property decorators:
-
-    def __init__(self, *arg):
-        self.layout=layout
-        if len(arg) >= 1:
-            parent=arg[0]
-            self.copy_proval(parent, self.proplist)
-            self.parent=parent
-
-if __name__ == '__main__':
-    from ${MODULENAME} import ${MODULENAME}
-    inst=${MODULENAME}()
-    inst.generate()
- 
-EOF
-
-## END HERE DOCUMENT
-
-echo "Creating ${MODULENAME}/layout.py"
-## BEGIN HERE DOCUMENT
-cat << EOF > "${MODULENAME}/layout.py"
-'''
-${MODULENAME} layout
-======
-
-'''
-import abc
-import pdb
-
-${LAYOUT_IMPORTSTR}
-## DEFINE YOUR IMPORTS BELOW:
-
-
-## END IMPORTS
-
-class layout(${BASECLASS}):
-
-    def __init__(self, temp_db, lib_name, params, used_names, **kwargs):
-        ${BASECLASS}.__init__(self, temp_db, lib_name, params, used_names, **kwargs)
-        self.aliases=kwargs.get('alises', None)
-    
-    @classmethod
-    def get_default_param_values(cls):
-        """Returns a dictionary containing default parameter values.
-        Override this method to define default parameter values.  As good practice,
-        you should avoid defining default values for technology-dependent parameters
-        (such as channel length, transistor width, etc.), but only define default
-        values for technology-independent parameters (such as number of tracks).
-        Returns
-        -------
-        default_params : Dict[str, Any]
-            dictionary of default parameter values.
-        """
-        return dict(
-        )
-
-    @classmethod
-    def get_params_info(cls):
-        # type: () -> Dict[str, str]
-        """Returns a dictionary containing parameter descriptions.
-        Override this method to return a dictionary from parameter names to descriptions.
-        Returns
-        -------
-        param_info : Dict[str, str]
-            dictionary from parameter name to description.
-        """
-        return dict(
-            )
-
-    # DEFINE YOUR HELPER FUNCTIONS BELOW:
-
-
-    # END HELPER FUNCTION DEFS
-    
-    def draw_layout(self):
-        # Define layout drawing procedure below:
-        # HINT: You can easily assign layout parameters for lower level templates from
-        # self.params by setting them from dict (<classname>_layout.get_params_info())
-
-        # Remember to pass the schematic parameters on to the schematic generator!
-        # HINT: You can easily parse schematic parameters from self.params by setting
-        # them from schematic.get_params_info()
-        self.sch_params = dict()
-
-class ${MODULENAME}(layout):
-    '''
-    Class to be used as template in higher level layouts
-    '''
-    def __init__(self, temp_db, lib_name, params, used_names, **kwargs):
-        ${BASECLASS}.__init__(self, temp_db, lib_name, params, used_names, **kwargs)
-
-EOF
-## END HERE DOCUMENT
-echo "Creating ${MODULENAME}/schematic.py"
-## BEGIN HERE DOCUMENT
-cat << EOF > "${MODULENAME}/schematic.py"
-import os
-import pkg_resources
-import pdb
-from bag.design import Module
-${SCH_IMPORTSTR}
-
-yaml_file = os.path.join(f'{os.environ["BAG_WORK_DIR"]}/BagModules/${MODULENAME}_templates', 'netlist_info', '${MODULENAME}.yaml')
-
-
-# noinspection PyPep8Naming
-class schematic(Module):
-    """Module for library ${MODULENAME}_templates cell ${MODULENAME}.
-
-    Fill in high level description here.
-    """
-
-    def __init__(self, bag_config, parent=None, prj=None, **kwargs):
-        Module.__init__(self, bag_config, yaml_file, parent=parent, prj=prj, **kwargs)
-       
-    @classmethod
-    def get_params_info(cls):
-        # type: () -> Dict[str, str]
-        """Returns a dictionary from parameter names to descriptions.
-
-        Returns
-        -------
-        param_info : Optional[Dict[str, str]]
-            dictionary from parameter names to descriptions.
-        """
-        return dict(
-            )
-
-    def design(self, **kwargs):
-        """To be overridden by subclasses to design this module.
-
-        This method should fill in values for all parameters in
-        self.parameters.  To design instances of this module, you can
-        call their design() method or any other ways you coded.
-
-        To modify schematic structure, call:
-
-        rename_pin()
-        delete_instance()
-        replace_instance_master()
-        reconnect_instance_terminal()
-        restore_instance()
-        array_instance()
-        """
-        # Procedure to follow:
-        # 1. Extract schematic parameters from kwargs
-        # 2. Process the netlist, e.g. reconnect instances or rename pins
-        # 3. Call self.instances[inst_name].design(param1=param1, param2=param2, ...)
-
-EOF
-## END HERE FILE
+# Change imports
+sed -i "s/# import/import/g" ${CURRDIR}/doc/source/conf.py
+sed -i "s/# sys.path/sys.path/g" ${CURRDIR}/doc/source/conf.py
+sed -i "s|abspath('.')|abspath('../../')|g" ${CURRDIR}/doc/source/conf.py
+# Change themse for sphinx doc
+sed -i "s/alabaster/sphinx_rtd_theme/g" ${CURRDIR}/doc/source/conf.py
+# Change toctree to include all relevant modules (__init__, layout, schematic)
+sed -i "s/:maxdepth: 2/:maxdepth: 3/g" ${CURRDIR}/doc/source/index.rst
+sed -i "/:caption: Contents:/a .. automodule:: ${MODULENAME}\n   :members:\n   :undoc-members:\n"\
+".. automodule:: ${MODULENAME}.layout\n   :members:\n   :undoc-members:\n"\
+".. automodule:: ${MODULENAME}.schematic\n   :members:\n   :undoc-members:\n" ${CURRDIR}/doc/source/index.rst
 
 # Init the git repo without remote
+echo "Initializing git project"
+echo "Remember to add remote!"
 git init
 
 echo "Creating .gitignore"

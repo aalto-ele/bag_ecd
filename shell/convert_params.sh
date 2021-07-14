@@ -75,19 +75,15 @@ fi
 # Generate imports based on dependcies
 if [ ${#dependencies[@]} -gt 0 ]; then
     layout_importstr="#Use these to get layout & sch parameters for respective generators:"$'\\\n'"from ${module}.schematic import schematic"
-    sch_importstr="${sch_importstr}"$'\\\n'"#Use these to get sch parameters for respective generators:"
     init_importstr="${init_importstr}"$'\n'"#Use these to instantiate generators down in hierarchy:"
     for ((i=0; i<${#dependencies[@]}; i++));
     do
         dep=${dependencies[$i]}
         init_importstr="${init_importstr}"$'\n'"from ${dep} import ${dep}"
-        layout_importstr="${layout_importstr}"$'\\\n'"from ${dep}.layout import layout as ${dep}_layout"
-        sch_importstr="${sch_importstr}"$'\\\n'"from ${dep}.schematic import schematic as ${dep}_sch"
+        layout_importstr="${layout_importstr}"$'\\\n'"from ${dep}.schematic import schematic as ${dep}_sch"
     done
 fi
 
-# Append module to dependices as well (needed for Makefile)
-dependencies=("${dependencies[@]}" "$module")
 modulepath="${currdir}/${module}/${module}"
 moduleroot="${currdir}/${module}"
 genpath="${modulepath}/__init__.py"
@@ -127,7 +123,7 @@ pattern_draw="NR>=${draw_start}&&NR<=${draw_end}"
 pattern_sch="NR>=${sch_start}&&NR<=${sch_end}"
 
 # Print generic properties used for all generators
-cat << EOF >> ${modulepath}/tmp
+cat << EOF > ${modulepath}/tmp
 
 '''
 =========
@@ -142,15 +138,6 @@ ${init_importstr}
 
 class ${module}(bag_design):
 
-    def get_hierarchical_params(self):
-        '''
-        Group lower level generator parameters into one dictionary per generator.
-        Now layout generator can expect parameters in single dict for all sub-templates.
-        '''
-        for dep in self.dependencies:
-            dep_params=getattr(self, dep).layout_params
-            setattr(self, dep+'_params', dep_params)
-    
     def __getattr__(self, name):
         '''
         Reason for this is given in below link:
@@ -192,15 +179,26 @@ class ${module}(bag_design):
     def parent(self, val):
         self._parent=val
 
-    @property
-    def dependencies(self):
-        if not hasattr(self, '_dependencies'):
-            self._dependencies=[]
-        return self._dependencies
-    @dependencies.setter
-    def dependencies(self,val):
-        self._dependencies=val
+EOF
 
+# Echo dependency param properties to file
+for i in "${dependencies[@]}"; do
+    echo "    @property" >> ${modulepath}/tmp
+    echo "    def ${i}_params(self):" >> ${modulepath}/tmp
+    echo "        '''" >> ${modulepath}/tmp
+    echo "        Dictionary of parameters for sub-template ${i}" >> ${modulepath}/tmp
+    echo "        Remeber to add this entry to layout.py get_params_info() function!" >> ${modulepath}/tmp
+    echo "        '''" >> ${modulepath}/tmp
+    echo "        if not hasattr(self, '_${i}_params'):" >> ${modulepath}/tmp
+    echo "            self._${i}_params=self.${i}.layout_params" >> ${modulepath}/tmp
+    echo "        return self._${i}_params" >> ${modulepath}/tmp
+    echo "    @${i}_params.setter" >> ${modulepath}/tmp
+    echo "    def ${i}_params(self,val):" >> ${modulepath}/tmp
+    echo "        self.${i}_params=val" >> ${modulepath}/tmp
+    echo "" >> ${modulepath}/tmp
+done 
+
+cat << EOF >> ${modulepath}/tmp
     @property
     def proplist(self):
         '''
@@ -273,11 +271,21 @@ sed -e 's/,*$//g' ${genpath} | awk -v tabstop="$tabstop" -F':' "$pattern_sch"'{g
 
 cat << EOF >> ${modulepath}/tmp
     def __init__(self, *arg):
+EOF
+
+# Echo dependency instantiation to file 
+if [ ${#dependencies[@]} -gt 0 ]; then
+    echo "        # Instantiate dependcies with proplist" >> ${modulepath}/tmp
+fi
+for i in "${dependencies[@]}"; do
+    echo "        self.${i}=${i}(self)" >> ${modulepath}/tmp
+done 
+
+cat << EOF >> ${modulepath}/tmp
         if len(arg) >=1:
             parent=arg[0]
-            self.copy_propval(parent, self.plotlist)
+            self.copy_propval(parent, self.proplist)
             self.parent=parent
-        self.get_hierarchical_params()
         self.layout=layout
 
 if __name__=='__main__':
@@ -300,7 +308,6 @@ else
 fi
 # Print dependency import into file 
 sed -i "/from [a-z\.]* import [A-Z]*[a-z]*Base/a\ ${layout_importstr}" ${modulepath}/layout.py
-sed -i "/from bag.design import Module/a\ ${sch_importstr}" ${modulepath}/schematic.py
 
 echo "Renaming tmp file to __init__.py"
 # Rename tmp file as the new generator
@@ -332,6 +339,8 @@ sed -i "/:caption: Contents:/a .. automodule:: ${module}\n   :members:\n   :undo
 ".. automodule:: ${module}.layout\n   :members:\n   :undoc-members:\n"\
 ".. automodule:: ${module}.schematic\n   :members:\n   :undoc-members:\n" ${moduleroot}/doc/source/index.rst
 
+# Append module to dependices as well (needed for Makefile)
+dependencies=("${dependencies[@]}" "$module")
 # Parse strings for defining dependencies, their generation runs and the dependencies them selves
 for ((i=0; i<${#dependencies[@]}; i++));
 do
@@ -437,7 +446,7 @@ endef
 .PHONY: all doc gen lvs drc pex clean
 
 # gen twice for initial mapping
-all: gen lvs drc pex
+all: doc gen lvs drc pex
 
 # Yaml file is generated with very first run that requires re-execution
 # Therefore the dependency
@@ -477,9 +486,9 @@ cat << 'HERE' >> ${moduleroot}/configure
 
 clean: 
 	sed -i "/${MODULENAME}_templates/d" \${BAG_WORK_DIR}/bag_libs.def
-	sed -i "/test_cell_templates/d" ${BAG_WORK_DIR}/cds.lib 
-	sed -i "/test_cell_testbenches/d" ${BAG_WORK_DIR}/cds.lib 
-	sed -i "/test_cell_generated/d" ${BAG_WORK_DIR}/cds.lib 
+	sed -i "/${MODULENAME}_templates/d" ${BAG_WORK_DIR}/cds.lib 
+	sed -i "/${MODULENAME}_testbenches/d" ${BAG_WORK_DIR}/cds.lib 
+	sed -i "/${MODULENAME}_generated/d" ${BAG_WORK_DIR}/cds.lib 
 	rm -rf  \${BAG_WORK_DIR}/BagModules/${MODULENAME}_templates
 	rm -rf  \${BAG_WORK_DIR}/${MODULENAME}_lvs_run
 	rm -rf  \${BAG_WORK_DIR}/${MODULENAME}_drc_run
