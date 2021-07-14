@@ -154,7 +154,6 @@ class bag_design(BAG_technology_definition, bag_startup,metaclass=abc.ABCMeta):
            
         if len(arg)>=2:
             self.parent=arg[0]
-            self.proplist=arg[1]
             for i in range(len(self.proplist)):
                 # Check first that parameter has corresponding entry in aliases
                 if self.proplist[i] in self.aliases.keys():
@@ -166,7 +165,7 @@ class bag_design(BAG_technology_definition, bag_startup,metaclass=abc.ABCMeta):
                         if  hasattr(self.parent,self.proplist[i]):
                             msg="Setting %s: %s to %s" %(self.__class__.__name__, self.proplist[i], getattr(self.parent,self.proplist[i]))
                             self.print_log(type= 'I', msg=msg)
-                            setattr(self,self.proplist[i],getattr(self.parent,self.proplist[i]))
+                            setattr(self,param_key,getattr(self.parent,self.proplist[i]))
                         else:
                             self.print_log(type='W', msg='Parent generator %s doesn\'t define parameter %s! Omitting!' \
                                     % (self.parent.__class__.__name__, self.proplist[i]))
