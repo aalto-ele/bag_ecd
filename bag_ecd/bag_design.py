@@ -176,6 +176,80 @@ class bag_design(BAG_technology_definition, bag_startup,metaclass=abc.ABCMeta):
                     self.print_log(type='W', msg='Alias for key %s isn\'t defined in %s.aliases! Omitting!' \
                             % (self.proplist[i],self.__class__.__name__))
 
+    #Class method for setting the logfile
+    @classmethod
+    def initlog(cls,*arg):
+        if len(arg) > 0:
+            __class__.logfile=arg[0]
+
+        if os.path.isfile(__class__.logfile):
+            os.remove(__class__.logfile)
+        typestr="INFO at "
+        msg="Default logfile override. Inited logging in %s" %(__class__.logfile)
+        fid= open(__class__.logfile, 'a')
+        print("%s %s  %s: %s" %(time.strftime("%H:%M:%S"),typestr, __class__.__name__ , msg))
+        fid.write("%s %s %s: %s\n" %(time.strftime("%H:%M:%S"),typestr, __class__.__name__ , msg))
+        fid.close()
+
+    @property
+    def DEBUG(self):
+        ''' Global attribute to setup a debug mode True | Falsw '''
+        if not hasattr(self,'_DEBUG'):
+            return 'False'
+        else:
+            return self._DEBUG
+    @DEBUG.setter
+    def DEBUG(self,value):
+        self._DEBUG=value
+
+    #Method for logging
+    #This is a method because it uses the logfile property
+    def print_log(self,**kwargs):
+        if not os.path.isfile(bag_design.logfile):
+            typestr="INFO at "
+            msg="Inited logging in %s" %(bag_design.logfile)
+            fid= open(bag_design.logfile, 'a')
+            print("%s %s bag_design: %s" %(time.strftime("%H:%M:%S"), typestr , msg))
+            fid.write("%s %s bag_design: %s\n" %(time.strftime("%H:%M:%S"), typestr, msg))
+            fid.close()
+        type=kwargs.get('type', 'I')
+        msg=kwargs.get('msg', 'Print this to the log')
+        if type== 'D':
+            if self.DEBUG:
+                typestr="DEBUG at"
+                print("%s %s %s: %s" %(time.strftime("%H:%M:%S"), typestr, self.__class__.__name__ , msg)) 
+                if hasattr(self,"logfile"):
+                    fid= open(bag_design.logfile, 'a')
+                    fid.write("%s %s %s: %s\n" %(time.strftime("%H:%M:%S"), typestr, self.__class__.__name__ , msg)) 
+            return
+        elif type== 'I':
+           typestr="INFO at "
+           print("%s %s %s: %s" %(time.strftime("%H:%M:%S"), typestr, self.__class__.__name__ , msg)) 
+        elif type=='W':
+           typestr="WARNING! at"
+           print("%s %s %s: %s" %(time.strftime("%H:%M:%S"), typestr, self.__class__.__name__ , msg)) 
+        elif type=='E':
+           typestr="ERROR! at"
+           print("%s %s %s: %s" %(time.strftime("%H:%M:%S"), typestr, self.__class__.__name__ , msg)) 
+
+        elif type=='F':
+           typestr="FATAL ERROR! at"
+           print("%s %s %s: %s" %(time.strftime("%H:%M:%S"), typestr, self.__class__.__name__ , msg)) 
+           print("Quitting due to fatal error in %s" %(self.__class__.__name__))
+           if hasattr(self,"logfile"):
+               fid= open(bag_design.logfile, 'a')
+               fid.write("%s Quitting due to fatal error in %s.\n" %( time.strftime("%H:%M:%S"), self.__class__.__name__))
+               fid.close()
+               quit()
+        else:
+           typestr="ERROR! at"
+           msg="Incorrect message type. Choose one of 'D', 'I', 'E' or 'F'."
+           print("%s %s %s: %s" %(time.strftime("%H:%M:%S"), typestr, self.__class__.__name__ , msg)) 
+
+        #If logfile set, print also there 
+        if hasattr(self,"logfile"):
+            fid= open(bag_design.logfile, 'a')
+            fid.write("%s %s %s: %s\n" %(time.strftime("%H:%M:%S"), typestr, self.__class__.__name__ , msg)) 
 
     def import_design(self):
         ''' 
