@@ -285,8 +285,13 @@ for i in "${dependencies[@]}"; do
 done 
 
 cat << EOF >> ${modulepath}/tmp
-        if len(arg) >=1:
+        if len(arg)==1: # Instantiate with proplist
             parent=arg[0]
+            self.copy_propval(parent, self.proplist)
+            self.parent=parent
+        if len(arg)==2: # Instantiate with proplist, parent also supplied aliases
+            parent=arg[0]
+            self.aliases=arg[1]
             self.copy_propval(parent, self.proplist)
             self.parent=parent
         self.layout=layout
