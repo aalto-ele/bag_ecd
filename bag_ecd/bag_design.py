@@ -258,7 +258,6 @@ class bag_design(BAG_technology_definition, bag_startup,metaclass=abc.ABCMeta):
         If filename was not given, dump to module dir.
         Useful for generating confgurations files for the SDK.
         '''
-        pdb.set_trace()
         if fname=='':
             fname='./%s/%s_params.json' % (self.name, self.name)
         with open(fname, 'w') as f:
