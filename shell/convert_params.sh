@@ -97,6 +97,9 @@ else
     exit 1
 fi
 
+# Make sch and draw_params of exact type for below match
+sed -i "s/self.draw_params\s*=\s*{/self.draw_params={/g" ${genpath}
+sed -i "s/self.sch_params\s*=\s*{/self.sch_params={/g" ${genpath}
 # Find line numbers of closing curly brackets for self.sch_params and self.draw_params
 pos_sch=( $( sed -n -f - ${genpath} <<END_SED
     /self.sch_params={/,/\s}/{
