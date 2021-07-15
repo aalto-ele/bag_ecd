@@ -16,6 +16,7 @@ import re
 
 from bag_ecd import bag_startup 
 
+import json
 import bag
 from bag.layout import RoutingGrid, TemplateDB
 from BAG_technology_definition import BAG_technology_definition 
@@ -250,6 +251,19 @@ class bag_design(BAG_technology_definition, bag_startup,metaclass=abc.ABCMeta):
         if hasattr(self,"logfile"):
             fid= open(bag_design.logfile, 'a')
             fid.write("%s %s %s: %s\n" %(time.strftime("%H:%M:%S"), typestr, self.__class__.__name__ , msg)) 
+
+    def param_dump(self, fname=''):
+        '''
+        Call this to dump generator parameters to file given by fname.
+        If filename was not given, dump to module dir.
+        Useful for generating confgurations files for the SDK.
+        '''
+        pdb.set_trace()
+        if fname=='':
+            fname='./%s/%s_params.json' % (self.name, self.name)
+        with open(fname, 'w') as f:
+            json.dump(self.layout_params, f, indent=4)
+        return
 
     def import_design(self):
         ''' 
