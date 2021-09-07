@@ -494,9 +494,6 @@ cat << 'HERE' >> ${moduleroot}/configure
 
 clean: 
 	sed -i "/${MODULENAME}_templates/d" \${BAG_WORK_DIR}/bag_libs.def
-	sed -i "/${MODULENAME}_templates/d" ${BAG_WORK_DIR}/cds.lib 
-	sed -i "/${MODULENAME}_testbenches/d" ${BAG_WORK_DIR}/cds.lib 
-	sed -i "/${MODULENAME}_generated/d" ${BAG_WORK_DIR}/cds.lib 
 	rm -rf  \${BAG_WORK_DIR}/BagModules/${MODULENAME}_templates
 	rm -rf  \${BAG_WORK_DIR}/${MODULENAME}_lvs_run
 	rm -rf  \${BAG_WORK_DIR}/${MODULENAME}_drc_run
