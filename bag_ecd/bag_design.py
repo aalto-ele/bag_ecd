@@ -98,7 +98,13 @@ class bag_design(BAG_technology_definition, bag_startup,metaclass=abc.ABCMeta):
             return self._layout_params
         else:
             return self._layout_params
-               
+    @layout_params.setter
+    def layout_params(self, val):
+        '''
+        Setter for layout_params. Useful for setting parameters in dict form from the SDK.
+        '''
+        self._layout_params=val
+
     @property
     def sch_params(self):
         '''
