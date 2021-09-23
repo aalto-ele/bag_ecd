@@ -267,7 +267,7 @@ class bag_design(BAG_technology_definition, bag_startup,metaclass=abc.ABCMeta):
         if fname=='':
             fname='./%s/%s_params.json' % (self.name, self.name)
         with open(fname, 'w') as f:
-            json.dump(self.layout_params, f, indent=4)
+            json.dump([self.layout_params], f, indent=4)
         return
 
     def import_design(self):
