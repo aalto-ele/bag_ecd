@@ -80,7 +80,7 @@ class bag_startup(metaclass=abc.ABCMeta):
         else: # We are running generators from SDK side
             if path not in MODULELIST:
                 if not path.endswith('_gen'):
-                print("WARN: Thou shalt name thy generator pytho package <generator_name>_gen or eventually it must be merged with TheSyDeKick Entity!")
+                    print("WARN: Thou shalt name thy generator python package <generator_name>_gen or eventually it must be merged with TheSyDeKick Entity!")
                 print("Adding %s to system path" %(path))
                 sys.path.append(path)
             else:
