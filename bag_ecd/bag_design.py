@@ -29,10 +29,31 @@ class bag_design(BAG_technology_definition, bag_startup,metaclass=abc.ABCMeta):
         return os.path.dirname(os.path.realpath(__file__)) + "/"+__name__
     
     @property
+    def package(self):
+        '''
+        The name of the instance to be generated. ECD naming convention is that the package name is suffixed by _gen.
+        Thus generator package of inverter is named inverter_gen.
+        '''
+        if not hasattr(self, '_package'):
+            self._package=os.path.splitext(os.path.basename(self._classfile))[0]
+        return self._package
+    #No setter, no deleter.
+
+    @property
     def name(self):
+        '''
+        The name of the instance to be generated. ECD naming convention is that the package name is suffixed by _gen.
+        Thus generator package of inverter is named inverter_gen.
+        '''
         if not hasattr(self, '_name'):
             #_classfile is an abstract property that must be defined in the class.
-            self._name=os.path.splitext(os.path.basename(self._classfile))[0]
+            chk=re.compile(r'.*_gen')
+            test=chk.match(self.package)
+            if test:
+                self._name=(self.package).replace('_gen','')
+            else:
+                self.print_log(type='I', msg='Generator package name does not have _gen suffix, and is not ECD compliant')
+                self._name=self.package
         return self._name
     #No setter, no deleter.
     
@@ -300,6 +321,7 @@ class bag_design(BAG_technology_definition, bag_startup,metaclass=abc.ABCMeta):
         #Parameters
         bag_project=self.bag_project
         template_library=self.template_library_name
+
         cell=self.name
 
         # Import the templates
@@ -343,7 +365,7 @@ class bag_design(BAG_technology_definition, bag_startup,metaclass=abc.ABCMeta):
                        
                     for line in inputfile:
                         if re.match('from bag.design.module import Module',line):
-                            tempfile.write('from %s.schematic import schematic as %s__%s\n' %(cell,template_library,cell))
+                            tempfile.write('from %s.schematic import schematic as %s__%s\n' %(self.package,template_library,cell))
                         else:
                             pass
                             #tempfile.write(line) 

@@ -70,18 +70,18 @@ class bag_startup(metaclass=abc.ABCMeta):
     currdir=os.getcwd()
     CMPATH=os.path.commonpath([currdir, BAGHOME])
     MODULELIST=[path.split('/')[-1] for path in sys.path] # List modules already in path
-
     for path in GENERATORS:
+        if not path.endswith('_gen'):
+            generatorname=path.split('/')[-1]
+            warning="WARN: Thou shalt name thy generator python package %s_gen or eventually it must be merged to TheSyDeKick Entity!" %(generatorname) 
+            print(warning)
+
         if CMPATH==BAGHOME: # We are running generators from BAG side
-            if not path.endswith('_gen'):
-                print("WARN: Thou shalt name thy generator python package <generator_name>_gen or eventually it must be merged to TheSyDeKick Entity!")
-            print("Adding %s to system path" %(path))
+            print("Adding %s to system path\n" %(path))
             sys.path.append(path)
         else: # We are running generators from SDK side
             if path not in MODULELIST:
-                if not path.endswith('_gen'):
-                    print("WARN: Thou shalt name thy generator python package <generator_name>_gen or eventually it must be merged with TheSyDeKick Entity!")
-                print("Adding %s to system path" %(path))
+                print("Adding %s to system path\n" %(path))
                 sys.path.append(path)
             else:
                 print("WARN: module %s already in path! Omitting!" % (path.split('/')[-1]))
