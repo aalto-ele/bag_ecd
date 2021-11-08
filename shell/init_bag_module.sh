@@ -62,6 +62,15 @@ fi
 
 MODULENAME=$(basename ${TARGETNAME})
 
+if [[ $MODULENAME == *_gen ]]; then
+    echo "Module named with suffix _gen! Good work!"
+else
+    echo "Module name didn't end with suffix _gen! Appending _gen to module name!"
+    MODULENAME="${MODULENAME}_gen"
+fi
+
+MODULE_IMPRTNAME=${MODULENAME::-4} # Remove suffix for layout and schematic generators
+
 # Construct template import clause 
 if [ ${BASECLASS} == "TemplateBase" ]; then
     LAYOUT_IMPORTSTR="from bag.layout.template import TemplateBase"$'\n'"from ${MODULENAME}.schematic import schematic"
@@ -75,8 +84,13 @@ if [ ${#DEPENDENCIES[@]} -gt 0 ]; then
     do
         DEP=${DEPENDENCIES[$i]}
         INIT_IMPORTSTR="${INIT_IMPORTSTR}"$'\n'"from ${DEP} import ${DEP}"
-        LAYOUT_IMPORTSTR="${LAYOUT_IMPORTSTR}"$'\n'"from ${DEP}.layout import ${DEP}"
-        LAYOUT_IMPORTSTR="${LAYOUT_IMPORTSTR}"$'\n'"from ${DEP}.schematic import schematic as ${DEP}_sch"
+        if [[ $DEP == *_gen ]]; then
+            LAYOUT_IMPORTSTR="${LAYOUT_IMPORTSTR}"$'\n'"from ${DEP}.layout import ${DEP::-4}"
+            LAYOUT_IMPORTSTR="${LAYOUT_IMPORTSTR}"$'\n'"from ${DEP}.schematic import schematic as ${DEP::-4}_sch"
+        else
+            LAYOUT_IMPORTSTR="${LAYOUT_IMPORTSTR}"$'\n'"from ${DEP}.layout import ${DEP}"
+            LAYOUT_IMPORTSTR="${LAYOUT_IMPORTSTR}"$'\n'"from ${DEP}.schematic import schematic as ${DEP}_sch"
+        fi
     done
 fi
 
@@ -85,11 +99,11 @@ echo "Creating module ${MODULENAME}"
 
 # Create module hierarchy:
 cd ${WORKDIR}
-mkdir BagModules/${MODULENAME}_templates
+mkdir BagModules/${MODULE_IMPRTNAME}_templates
 mkdir ${MODULENAME}
 mkdir ${MODULENAME}/${MODULENAME}
-mkdir ${MODULENAME}/${MODULENAME}_templates
-mkdir ${MODULENAME}/${MODULENAME}_testbenches
+mkdir ${MODULENAME}/${MODULE_IMPRTNAME}_templates
+mkdir ${MODULENAME}/${MODULE_IMPRTNAME}_testbenches
 
 cd ${MODULENAME}
 
@@ -282,7 +296,7 @@ class layout(${BASECLASS}):
         # them from schematic.get_params_info().keys()
         self.sch_params = dict()
 
-class ${MODULENAME}(layout):
+class ${MODULE_IMPRTNAME}(layout):
     '''
     Class to be used as template in higher level layouts
     '''
@@ -299,12 +313,12 @@ import pkg_resources
 import pdb
 from bag.design import Module
 
-yaml_file = os.path.join(f'{os.environ["BAG_WORK_DIR"]}/BagModules/${MODULENAME}_templates', 'netlist_info', '${MODULENAME}.yaml')
+yaml_file = os.path.join(f'{os.environ["BAG_WORK_DIR"]}/BagModules/${MODULE_IMPRTNAME}_templates', 'netlist_info', '${MODULE_IMPRTNAME}.yaml')
 
 
 # noinspection PyPep8Naming
 class schematic(Module):
-    """Module for library ${MODULENAME}_templates cell ${MODULENAME}.
+    """Module for library ${MODULE_IMPRTNAME}_templates cell ${MODULE_IMPRTNAME}.
 
     Fill in high level description here.
     """
@@ -355,9 +369,15 @@ DEPENDENCIES=("${DEPENDENCIES[@]}" "$MODULENAME")
 for ((i=0; i<${#DEPENDENCIES[@]}; i++));
 do
     DEP=${DEPENDENCIES[$i]}
-    DEP_DEF_STR="${DEP_DEF_STR}DEP${i} := \\\${BAG_WORK_DIR}/BagModules/${DEP}_templates/netlist_info/${DEP}.yaml"$'\n'
-    DEP_GEN_STR="${DEP_GEN_STR}\\\$(DEP${i}):"$'\n'$'\t'"cd \\\${BAG_WORK_DIR} && \\\${BAG_PYTHON} \\\${BAG_WORK_DIR}/${DEP}/${DEP}/__init__.py"$'\n'
-    DEP_STR="${DEP_STR} \\\$(DEP${i})" 
+    if [[ $DEP == *_gen ]]; then
+        DEP_DEF_STR="${DEP_DEF_STR}DEP${i} := \\\${BAG_WORK_DIR}/BagModules/${DEP::-4}_templates/netlist_info/${DEP::-4}.yaml"$'\n'
+        DEP_GEN_STR="${DEP_GEN_STR}\\\$(DEP${i}):"$'\n'$'\t'"cd \\\${BAG_WORK_DIR} && \\\${BAG_PYTHON} \\\${BAG_WORK_DIR}/${DEP}/${DEP}/__init__.py"$'\n'
+        DEP_STR="${DEP_STR} \\\$(DEP${i})" 
+    else
+        DEP_DEF_STR="${DEP_DEF_STR}DEP${i} := \\\${BAG_WORK_DIR}/BagModules/${DEP}_templates/netlist_info/${DEP}.yaml"$'\n'
+        DEP_GEN_STR="${DEP_GEN_STR}\\\$(DEP${i}):"$'\n'$'\t'"cd \\\${BAG_WORK_DIR} && \\\${BAG_PYTHON} \\\${BAG_WORK_DIR}/${DEP}/${DEP}/__init__.py"$'\n'
+        DEP_STR="${DEP_STR} \\\$(DEP${i})" 
+    fi
 done
 
 echo "Creating configure"
@@ -365,6 +385,12 @@ echo "Creating configure"
 cat << 'HERE' > configure
 #!/bin/sh
 MODULENAME=$(basename $(cd $(dirname ${0}) && pwd) ) 
+if [[ $MODULENAME == *_gen ]]; then
+    CELLNAME=${MODULENAME::-4}
+else
+    CELLNAME=$MODULENAME
+fi
+
 MODULELOCATION=$(cd `dirname ${0}`/.. && pwd )
 TECHLIB="$(sed -n '/tech_lib/s/^.*tech_lib:\s*"//gp' \
     ${BAG_WORK_DIR}/bag_config.yaml | sed -n 's/".*$//p' )"
@@ -381,21 +407,21 @@ fi
 
 
 LVSOPTS="\
-    -c ${MODULENAME} \
+    -c ${CELLNAME} \
     ${LVSBOXSTRING} \
     -f \
     -G \"VSS\" \
-    -l ${MODULENAME}_generated \
+    -l ${CELLNAME}_generated \
     -v \"VDD VSS\" \
     -S \"VDD\" \
     -t ${TECHLIB} \
 "
 PEXOPTS="\
-    -c ${MODULENAME} \
+    -c ${CELLNAME} \
     ${LVSBOXSTRING} \
     -f \
     -G \"VSS\" \
-    -l ${MODULENAME}_generated \
+    -l ${CELLNAME}_generated \
     -R \"0.1 0.01 0.1 0.01\"  \
     -v \"VDD VSS\" \
     -S \"VDD\" \
@@ -404,18 +430,18 @@ PEXOPTS="\
 
 DRC="\${BAG_WORK_DIR}/shell/drc.sh" 
 DRCOPTS="\
-    -c ${MODULENAME} \
+    -c ${CELLNAME} \
     -d \
     -f \
-    -l ${MODULENAME}_drc_run \
+    -l ${CELLNAME}_drc_run \
     -L \
-    -g ${BAG_WORK_DIR}/${MODULENAME}_lvs_run/${MODULENAME}.calibre.db \
+    -g ${BAG_WORK_DIR}/${CELLNAME}_lvs_run/${CELLNAME}.calibre.db \
 "
 
 for purpose in templates testbenches; do
-    if [ -z "$(grep ${MODULENAME}_${purpose} ${MODULELOCATION}/cds.lib)" ]; then
-        echo "Adding ${MODULENAME}_${purpose} to $MODULELOCATION/cds.lib"
-        echo "DEFINE  ${MODULENAME}_${purpose} \${BAG_WORK_DIR}/${MODULENAME}/${MODULENAME}_${purpose}" >> ${MODULELOCATION}/cds.lib
+    if [ -z "$(grep ${CELLNAME}_${purpose} ${MODULELOCATION}/cds.lib)" ]; then
+        echo "Adding ${CELLNAME}_${purpose} to $MODULELOCATION/cds.lib"
+        echo "DEFINE  ${CELLNAME}_${purpose} \${BAG_WORK_DIR}/${MODULENAME}/${CELLNAME}_${purpose}" >> ${MODULELOCATION}/cds.lib
     fi
 done
 
@@ -471,13 +497,13 @@ HERE
 cat << 'HERE' >> configure
 	\$(gen-run)
 
-lvs: \${BAG_WORK_DIR}/${MODULENAME}_generated/${MODULENAME}/layout/layout.oa
+lvs: \${BAG_WORK_DIR}/${CELLNAME}_generated/${CELLNAME}/layout/layout.oa
 	\$(lvs-run)
 
-pex: \${BAG_WORK_DIR}/${MODULENAME}_generated/${MODULENAME}/layout/layout.oa
+pex: \${BAG_WORK_DIR}/${CELLNAME}_generated/${CELLNAME}/layout/layout.oa
 	\$(pex-run)
 
-drc: \${BAG_WORK_DIR}/${MODULENAME}_lvs_run/${MODULENAME}.calibre.db
+drc: \${BAG_WORK_DIR}/${CELLNAME}_lvs_run/${CELLNAME}.calibre.db
 	cd \${BAG_WORK_DIR} && \\
     \$(DRC) \$(DRCOPTS)
 
@@ -489,17 +515,17 @@ ${DEP_GEN_STR}
 HERE
 
 cat << 'HERE' >> configure
-\${BAG_WORK_DIR}/${MODULENAME}_generated/${MODULENAME}/layout/layout.oa:
+\${BAG_WORK_DIR}/${CELLNAME}_generated/${CELLNAME}/layout/layout.oa:
 	\$(gen-run)
 
-\${BAG_WORK_DIR}/${MODULENAME}_lvs_run/${MODULENAME}.calibre.db: \${BAG_WORK_DIR}/${MODULENAME}_generated/${MODULENAME}/layout/layout.oa
+\${BAG_WORK_DIR}/${CELLNAME}_lvs_run/${CELLNAME}.calibre.db: \${BAG_WORK_DIR}/${CELLNAME}_generated/${CELLNAME}/layout/layout.oa
 	\$(lvs-run)
 
 clean: 
-	sed -i "/${MODULENAME}_templates/d" \${BAG_WORK_DIR}/bag_libs.def
-	rm -rf  \${BAG_WORK_DIR}/BagModules/${MODULENAME}_templates
-	rm -rf  \${BAG_WORK_DIR}/${MODULENAME}_lvs_run
-	rm -rf  \${BAG_WORK_DIR}/${MODULENAME}_drc_run
+	sed -i "/${CELLNAME}_templates/d" \${BAG_WORK_DIR}/bag_libs.def
+	rm -rf  \${BAG_WORK_DIR}/BagModules/${CELLNAME}_templates
+	rm -rf  \${BAG_WORK_DIR}/${CELLNAME}_lvs_run
+	rm -rf  \${BAG_WORK_DIR}/${CELLNAME}_drc_run
 
 EOF
 

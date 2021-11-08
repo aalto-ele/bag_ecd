@@ -54,30 +54,38 @@ class bag_startup(metaclass=abc.ABCMeta):
 
 
     #Appending all BAG generator python modules to system path 
-    # (only ones, with set subtraction)
-    GENERATORS=[(x[1]) for x in os.walk( BAGHOME)][0]
-    #Add automatically the files from BAGHOME
-    MODULEPATHS=[]
-    DIR=os.path.abspath(os.getcwd())
-    # This should be BAG_WORK_DIR if executed from BAG_WORK_DIR
-    DIR2=os.path.commonpath([DIR,os.environ['BAG_WORK_DIR']])
-    MODULELIST = [path.split('/')[-1] for path in sys.path]
-    for i in GENERATORS:
-        if DIR2==os.environ['BAG_WORK_DIR']:
-            if os.path.isfile(BAGHOME+"/" + i +"/" + i + "/__init__.py"):
-                MODULEPATHS.append(BAGHOME+"/" + i)
-        else:
-            # Do not add module to path if already added by TheSyDeKick
-            if i not in MODULELIST:
-                if os.path.isfile(BAGHOME+"/" + i +"/" + i + "/__init__.py"):
-                    MODULEPATHS.append(BAGHOME+"/" + i)
-
-
-    for i in list(set(MODULEPATHS)-set(sys.path)):
-        print("Adding %s to system path" %(i))
-        sys.path.append(i)
-    del i
+    # Strategy: Find all files with path "$BAG_WORK_DIR/module_name/module_name/__init__.py",
+    # append to list, set substract sys.path from GENERATORS to ensure that nothing is added
+    # twice and to ensure uniqueness
+    root=BAGHOME
+    GENERATORS=[]
+    for item in os.listdir(root):
+        if not os.path.isfile(os.path.join(root, item)):
+            if os.path.isfile(os.path.join(root, item, item, '__init__.py')):
+                GENERATORS.append(os.path.join(BAGHOME,item)) 
+    GENERATORS=list(set(GENERATORS) - set(sys.path))
     
+    # To make BAG work from SyDeKick: do not add gen to path if there is an entity with same name (this shouldn't be the case anyway)
+    # If CMPATH is not BAGHOME, then we are running from SDK.
+    currdir=os.getcwd()
+    CMPATH=os.path.commonpath([currdir, BAGHOME])
+    MODULELIST=[path.split('/')[-1] for path in sys.path] # List modules already in path
+    for path in GENERATORS:
+        if not path.endswith('_gen'):
+            generatorname=path.split('/')[-1]
+            warning="WARN: Thou shalt name thy generator python package %s_gen or eventually it must be merged to TheSyDeKick Entity!" %(generatorname) 
+            print(warning)
+
+        if CMPATH==BAGHOME: # We are running generators from BAG side
+            print("Adding %s to system path\n" %(path))
+            sys.path.append(path)
+        else: # We are running generators from SDK side
+            if path not in MODULELIST:
+                print("Adding %s to system path\n" %(path))
+                sys.path.append(path)
+            else:
+                print("WARN: module %s already in path! Omitting!" % (path.split('/')[-1]))
+
     #Default logfile. Override with initlog if you want something else
     #/tmp/TheSDK_randomstr_uname_YYYYMMDDHHMM.log
     logfile="/tmp/BAG_" + os.path.basename(tempfile.mkstemp()[1])+"_"+getpass.getuser()+"_"+time.strftime("%Y%m%d%H%M")+".log"

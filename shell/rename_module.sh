@@ -8,6 +8,8 @@
 #############################################################################
 #Function to display help with -h argument and to control
 #the configuration from the command line
+set -e
+
 help_f()
 {
 SCRIPTNAME="rename_module"
@@ -65,7 +67,6 @@ sed -i "/from\s*${MODULESOURCE}/s/${MODULESOURCE}/${MODULETARGET}/g" ${MODULETAR
 sed -i "/class\s*${MODULESOURCE}/s/${MODULESOURCE}/${MODULETARGET}/g" ${MODULETARGET}/__init__.py
 sed -i "/inst\s*=\s*${MODULESOURCE}/s/${MODULESOURCE}/${MODULETARGET}/g" ${MODULETARGET}/__init__.py
 sed -i "/class\s*${MODULESOURCE}/s/${MODULESOURCE}/${MODULETARGET}/g" ${MODULETARGET}/layout.py
-sed -i "/inst\s*=\s*${MODULESOURCE}/s/${MODULESOURCE}/${MODULETARGET}/g" ${MODULETARGET}/__init__.py
 
 #3 Copy the Virtuoso templates library on other name
 mv ${MODULESOURCE}_templates ${MODULETARGET}_templates
