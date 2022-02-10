@@ -28,6 +28,53 @@ class bag_design(BAG_technology_definition, bag_startup,metaclass=abc.ABCMeta):
     def _classfile(self):
         return os.path.dirname(os.path.realpath(__file__)) + "/"+__name__
     
+    def __getattr__(self, name):
+        '''
+        Reason for this is given in below link:
+        https://stackoverflow.com/questions/4017572/how-can-i-make-an-alias-to-a-non-function-member-attribute-in-a-python-class
+        '''
+        if name=='aliases':
+            raise AttributeError
+        return object.__getattribute__(self, name)
+
+    @property
+    def aliases(self):
+        '''
+        Mapping between top-level generator parameter name and name of parameter defined in this generator.
+        This provides a convenient way of controlling same parameter (e.g. 'lch') for each of the generators
+        in the hierarchy.
+
+        Key gives top-level parameter name, value gives name for this generator
+        '''
+        if not hasattr(self, '_aliases'):
+            self._aliases={}
+        return self._aliases
+    @aliases.setter
+    def aliases(self, val):
+        self._aliases=val
+
+    @property
+    def parent(self):
+        '''
+        Parent generator in hieararchy. Set automatically
+        '''
+        if not hasattr(self, '_parent'):
+            self._parent=None
+        return self._parent
+    @parent.setter
+    def parent(self, val):
+        self._parent=val
+
+    @property
+    def proplist(self):
+        '''
+        List of property names to be copied from parent . Set from
+        keys of self.aliases
+        '''
+        if not hasattr(self, '_proplist'):
+            self._proplist=list(self.aliases.keys())
+        return self._proplist
+
     @property
     def package(self):
         '''
@@ -56,9 +103,13 @@ class bag_design(BAG_technology_definition, bag_startup,metaclass=abc.ABCMeta):
                 self._name=self.package
         return self._name
     #No setter, no deleter.
-    
+   
+
     @property
     def bag_project(self):
+        '''
+        Property that  initializes/returns bag project.
+        '''
         if hasattr(self,'_bag_project'):
             return self._bag_project
         else:
@@ -68,6 +119,11 @@ class bag_design(BAG_technology_definition, bag_startup,metaclass=abc.ABCMeta):
 
     @property
     def template_library_name(self):
+        '''
+        Name of the template library : String
+        Default : self.name+'_templates'
+        Example : inverter_templates
+        '''
         if not hasattr(self, '_template_library_name'):
             self._template_library_name= self.name+'_templates'
         return self._template_library_name
@@ -75,12 +131,23 @@ class bag_design(BAG_technology_definition, bag_startup,metaclass=abc.ABCMeta):
     
     @property
     def implementation_library_name(self):
+        '''
+        Name of the target implementation library : String
+        Default : self.name+'_generated'
+        Example : inverter_generated
+        '''
         if not hasattr(self, '_implementation_library_name'):
             self._implementation_library_name= self.name+'_generated'
         return self._implementation_library_name
 
     @property
     def testbench_library_name(self):
+        '''
+        Name of the testbench library : String
+        Retained for backwards combatibility. Not used by ECD methodology. 
+        Default : self.name+'_testbenches'
+        Example : inverter_testbenches
+        '''
         if not hasattr(self, '_testbench_library_name'):
             self._testbench_library_name= self.name+'_testbenches'
         return self._testbench_library_name
@@ -450,4 +517,5 @@ class bag_design(BAG_technology_definition, bag_startup,metaclass=abc.ABCMeta):
         dsn.design(**self.sch_params)
         dsn.implement_design(self.implementation_library_name, top_cell_name=self.name)
         self.print_log(msg='Finished implementing schematic')
+
 
