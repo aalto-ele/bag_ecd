@@ -134,43 +134,6 @@ class ${MODULENAME}(bag_design):
     def _classfile(self):
         return os.path.dirname(os.path.realpath(__file__)) + "/"+__name__
 
-    def __getattr__(self, name):
-        '''
-        Reason for this is given in below link:
-        https://stackoverflow.com/questions/4017572/how-can-i-make-an-alias-to-a-non-function-member-attribute-in-a-python-class
-        '''
-        if name=='aliases':
-            raise AttributeError
-        return object.__getattribute__(self, name)
-
-    @property
-    def aliases(self):
-        '''
-        Mapping between top-level generator parameter name and name of parameter defined in this generator.
-        This provides a convenient way of controlling same parameter (e.g. 'lch') for each of the generators
-        in the hierarchy.
-
-        Key gives top-level parameter name, value gives name for this generator
-        '''
-        if not hasattr(self, '_aliases'):
-            self._aliases={}
-        return self._aliases
-    @aliases.setter
-    def aliases(self, val):
-        self._aliases=val
-
-    @property
-    def parent(self):
-        '''
-        Parent generator in hieararchy. Set automatically
-        '''
-        if not hasattr(self, '_parent'):
-            self._parent=None
-        return self._parent
-    @parent.setter
-    def parent(self, val):
-        self._parent=val
-
 EOF
 
 # Echo dependency param properties to file
@@ -190,21 +153,6 @@ for i in "${DEPENDENCIES[@]}"; do
     echo "" >> ${MODULENAME}/__init__.py
 done 
 
-cat << EOF >> "${MODULENAME}/__init__.py"
-    @property
-    def proplist(self):
-        '''
-        List of property names to be copied from parent . Set from
-        keys of self.aliases
-        '''
-        if not hasattr(self, '_proplist'):
-            self._proplist=list(self.aliases.keys())
-        return self._proplist
-
-    # Define template draw and schematic parameters below using property decorators:
-
-    def __init__(self, *arg):
-EOF
 # Echo dependency instantiation to file 
 if [ ${#DEPENDENCIES[@]} -gt 0 ]; then
     echo "        # Instantiate dependcies with proplist" >> ${MODULENAME}/__init__.py
@@ -213,6 +161,7 @@ for i in "${DEPENDENCIES[@]}"; do
     echo "        self.${i}=${i}(self)" >> ${MODULENAME}/__init__.py
 done 
 cat << EOF >> "${MODULENAME}/__init__.py"
+    def __init__(self, *arg):
         if len(arg)==1: # Instantiate with proplist
             parent=arg[0]
             self.copy_propval(parent, self.proplist)
