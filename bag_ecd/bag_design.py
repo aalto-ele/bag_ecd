@@ -27,6 +27,21 @@ class bag_design(BAG_technology_definition, bag_startup,metaclass=abc.ABCMeta):
     @abstractmethod
     def _classfile(self):
         return os.path.dirname(os.path.realpath(__file__)) + "/"+__name__
+
+    def __init__(self, *arg):
+        ''' Overload if you need to refine this
+        '''
+        if len(arg)==1: # Instantiate with proplist
+            parent=arg[0]
+            self.copy_propval(parent, self.proplist)
+            self.parent=parent
+        if len(arg)==2: # Instantiate with proplist, parent also supplied aliases
+            parent=arg[0]
+            self.aliases=arg[1]
+            self.copy_propval(parent, self.proplist)
+            self.parent=parent
+        self.layout=layout
+
     
     def __getattr__(self, name):
         '''
@@ -218,6 +233,15 @@ class bag_design(BAG_technology_definition, bag_startup,metaclass=abc.ABCMeta):
     def sch_params(self, val):
         self._sch_params=val
 
+    @property
+    def sch_dummy_info(self): 
+        '''Flavor of the transistors'''
+        if not hasattr(self, '_sch_dummy_info'):
+            self._sch_dummy_info=[(('nch', 0, 0, '', '', ''), 0)]
+        return self._sch_dummy_info
+    @sch_dummy_info.setter
+    def sch_dummy_info(self, val):
+        self._sch_dummy_info=val
 
     @property
     def routing_grid(self):
