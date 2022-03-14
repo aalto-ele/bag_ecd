@@ -388,7 +388,7 @@ DRCOPTS="\
 "
 
 for purpose in templates; do
-    if [ -z "$(grep "DEFINE\s*${CELLNAME}_${purpose}" ${MODULELOCATION}/cds.lib)" ]; then
+    if [ -z "$(grep "^DEFINE\s*${CELLNAME}_${purpose}" ${MODULELOCATION}/cds.lib)" ]; then
         echo "Adding ${CELLNAME}_${purpose} to $MODULELOCATION/cds.lib"
         echo "DEFINE  ${CELLNAME}_${purpose} \${BAG_WORK_DIR}/${MODULENAME}/${CELLNAME}_${purpose}" >> ${MODULELOCATION}/cds.lib
     fi
