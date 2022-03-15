@@ -183,21 +183,7 @@ class bag_design(BAG_technology_definition, bag_startup,metaclass=abc.ABCMeta):
                     else:
                         raise self.print_log(type='F',msg='Parameter %s defined in layout generator not defined in __init__ of %s or as an optional parameter!'\
                                 % (key, type(self).__name__))
-            return self._layout_params
-        else:
-            for key in self.layout.get_params_info(): # This classmethod must exist in every layout generator
-                if hasattr(self, key):
-                    self._layout_params[key]=getattr(self, key)
-                # if parameter was not define in __init__, it might have default value in layout.py
-                elif key in self.layout.get_default_param_values().keys(): 
-                    self.print_log(msg="Attribute %s not defined in %s/__init__.py, but is given default value in layout generator" \
-                            % (key, type(self).__name__))
-                    self.print_log(msg="Consider defining it explicitly in __init__.py in order to provide access to paramter")
-                # Parameter was not defined anywhere, raise error
-                else:
-                    raise self.print_log(type='F',msg='Parameter %s defined in layout generator not defined in __init__ of %s or as an optional parameter!'\
-                            % (key, type(self).__name__))
-            return self._layout_params
+        return self._layout_params
     @layout_params.setter
     def layout_params(self, val):
         '''
